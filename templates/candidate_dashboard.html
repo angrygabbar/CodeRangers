@@ -54,26 +54,25 @@
 
     <!-- Right Column: Communication Tools -->
     <div class="space-y-8">
-        <!-- Send Message Form -->
         <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.1s;">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Send a Message</h2>
-            <form action="{{ url_for('send_message') }}" method="POST" class="space-y-4">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Share Java Code Snippet</h2>
+            <form action="{{ url_for('share_code') }}" method="POST" class="space-y-4">
                 <div>
-                    <label for="recipient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">To:</label>
-                    <select name="recipient_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
+                    <label for="code_recipient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Share with:</label>
+                    <select name="recipient_id" id="code_recipient" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
                         {% for user in messageable_users %}
                             <option value="{{ user.id }}">{{ user.username }} ({{ user.role.title() }})</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div>
-                    <label for="body" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Your Message:</label>
-                    <textarea name="body" rows="4" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition"></textarea>
+                    <label for="java_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Java Code:</label>
+                    <textarea name="java_code" id="java_code" rows="10" class="mt-1 font-mono text-sm appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300 transition" placeholder="public class HelloWorld..."></textarea>
                 </div>
-                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:scale-105">Send</button>
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300 transform hover:scale-105">Share Code</button>
             </form>
         </div>
-        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.3s;">
+         <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.3s;">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Message History</h2>
             <ul class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                 {% for msg in messages %}
