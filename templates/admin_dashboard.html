@@ -1,0 +1,156 @@
+{% extends "layout.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 animate-dynamic">Admin Dashboard</h1>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Left Column -->
+    <div class="space-y-8">
+        <!-- Post a Job Opening -->
+        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Post a New Job Opening</h2>
+            <form action="{{ url_for('post_job') }}" method="POST" class="space-y-4">
+                <div>
+                    <label for="job_title" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Job Title</label>
+                    <input type="text" name="job_title" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
+                </div>
+                <div>
+                    <label for="job_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Job Description</label>
+                    <textarea name="job_description" rows="4" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition"></textarea>
+                </div>
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300 transform hover:scale-105">Post Job</button>
+            </form>
+        </div>
+
+        <!-- Pending Approvals -->
+        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.1s;">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Pending Approvals</h2>
+            {% if pending_users %}
+                <ul class="space-y-3">
+                    {% for user in pending_users %}
+                        <li class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between animate-stagger">
+                            <div class="flex items-center mb-2 sm:mb-0">
+                                <img src="{{ user.avatar_url }}" alt="Avatar" class="rounded-full w-10 h-10 mr-3">
+                                <div>
+                                    <p class="font-semibold text-gray-800 dark:text-white">{{ user.username }}</p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ user.role.title() }}</p>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <a href="{{ url_for('approve_user', user_id=user.id) }}" class="px-3 py-1 bg-green-500 text-white text-sm font-semibold rounded-md hover:bg-green-600 transition-transform hover:scale-105">Approve</a>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-gray-500 dark:text-gray-400">No pending user approvals.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Incoming Job Applications -->
+        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.2s;">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Incoming Job Applications</h2>
+            {% if applications %}
+                <ul class="space-y-3 max-h-96 overflow-y-auto pr-2">
+                    {% for app in applications %}
+                        <li class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-stagger">
+                           <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="font-bold text-gray-800 dark:text-white">{{ app.job.title }}</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Applied by: <strong class="dark:text-white">{{ app.candidate.username }}</strong></p>
+                                </div>
+                                {% if app.status == 'pending' %}
+                                    <div class="flex-shrink-0 flex space-x-2">
+                                        <a href="{{ url_for('accept_application', app_id=app.id) }}" class="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-md hover:bg-green-600">Accept</a>
+                                        <a href="{{ url_for('reject_application', app_id=app.id) }}" class="px-3 py-1 bg-red-500 text-white text-xs font-semibold rounded-md hover:bg-red-600">Reject</a>
+                                    </div>
+                                {% else %}
+                                     <span class="px-2 py-1 text-xs font-semibold rounded-full {% if app.status == 'accepted' %}text-green-800 bg-green-100 dark:bg-green-900 dark:text-green-200{% else %}text-red-800 bg-red-100 dark:bg-red-900 dark:text-red-200{% endif %}">{{ app.status.title() }}</span>
+                                {% endif %}
+                           </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-gray-500 dark:text-gray-400">No new job applications.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="space-y-8">
+        <!-- Send a Message -->
+        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.1s;">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Send a Message</h2>
+            <form action="{{ url_for('send_message') }}" method="POST" class="space-y-4">
+                <div>
+                    <label for="recipient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">To:</label>
+                    <select name="recipient_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
+                        {% for user in messageable_users %}
+                            <option value="{{ user.id }}">{{ user.username }} ({{ user.role.title() }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="body" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message:</label>
+                    <textarea name="body" rows="4" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition"></textarea>
+                </div>
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:scale-105">Send</button>
+            </form>
+        </div>
+
+        <!-- Message History -->
+        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.3s;">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Message History</h2>
+            <ul class="space-y-4 max-h-96 overflow-y-auto pr-2">
+                {% for msg in messages %}
+                    <li class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-stagger">
+                        <div class="flex justify-between text-sm mb-1">
+                            <p class="font-semibold text-gray-800 dark:text-white">From: {{ msg.sender.username }}</p>
+                            <p class="font-semibold text-gray-800 dark:text-white">To: {{ msg.recipient.username }}</p>
+                        </div>
+                        <p class="text-gray-700 dark:text-gray-300">{{ msg.body }}</p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2 text-right">{{ msg.timestamp.strftime('%b %d, %Y at %I:%M %p') }}</p>
+                    </li>
+                {% else %}
+                    <li class="text-gray-500 dark:text-gray-400">No messages yet.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- NEW: Team Activity Feed Section -->
+<div class="mt-8 bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.4s;">
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Team Activity Feed</h2>
+    <ul class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+        {% for activity in activities %}
+        <li class="flex items-start space-x-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-stagger">
+            <img src="{{ activity.author.avatar_url }}" alt="Avatar" class="rounded-full w-12 h-12 flex-shrink-0">
+            <div>
+                <p class="font-semibold text-gray-800 dark:text-white">{{ activity.author.username }}</p>
+                <p class="text-gray-700 dark:text-gray-300 mt-1">{{ activity.content }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">{{ activity.timestamp.strftime('%b %d, %Y at %I:%M %p') }}</p>
+            </div>
+        </li>
+        {% else %}
+            <li class="text-gray-500 dark:text-gray-400">No activity updates yet.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<!-- Received Code Snippets Section -->
+<div class="mt-8 bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.5s;">
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Received Code Snippets</h2>
+    <div class="space-y-6">
+        {% for snippet in received_snippets %}
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 animate-stagger">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">From: <strong class="text-gray-800 dark:text-white">{{ snippet.snippet_sender.username }}</strong> on {{ snippet.timestamp.strftime('%b %d, %Y') }}</p>
+                <pre><code class="language-java">{{ snippet.code }}</code></pre>
+            </div>
+        {% else %}
+            <p class="text-gray-500 dark:text-gray-400">No code snippets have been shared with you.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
