@@ -1,50 +1,149 @@
 {% extends "layout.html" %}
 {% block title %}Messages{% endblock %}
 {% block content %}
-<h1 class="text-3xl font-bold text-white mb-6 animate-dynamic">Messages</h1>
-<p class="text-lg text-gray-300 mb-6 animate-dynamic" style="animation-delay: 0.1s;">
-    Communicate directly with other members of the portal.
-</p>
-
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <!-- Left Column: Send a Message -->
-    <div class="lg:col-span-1 bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.2s;">
-        <h2 class="text-2xl font-bold text-white mb-4">Send a New Message</h2>
-        <form action="{{ url_for('send_message') }}" method="POST" class="space-y-4">
-            <div>
-                <label for="recipient" class="block text-sm font-medium text-gray-300">To:</label>
-                <select name="recipient_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-700/50 text-white transition">
-                    <option value="">-- Select a user --</option>
-                    {% for user in messageable_users %}
-                        <option class="bg-gray-800" value="{{ user.id }}">{{ user.username }} ({{ user.role.title() }})</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div>
-                <label for="body" class="block text-sm font-medium text-gray-300">Message:</label>
-                <textarea name="body" rows="5" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition"></textarea>
-            </div>
-            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:scale-105">Send Message</button>
-        </form>
-    </div>
-
-    <!-- Right Column: Message History -->
-    <div class="lg:col-span-2 bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.3s;">
-        <h2 class="text-2xl font-bold text-white mb-4">Message History</h2>
-        <ul class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-            {% for msg in messages %}
-                <li class="p-4 {% if msg.sender_id == current_user.id %}bg-indigo-500/10{% else %}bg-white/5{% endif %} rounded-lg animate-stagger">
-                    <div class="flex justify-between text-sm mb-1">
-                        <p class="font-semibold text-white">From: {{ msg.sender.username }}</p>
-                        <p class="font-semibold text-white">To: {{ msg.recipient.username }}</p>
+<div class="h-[calc(100vh-12rem)] bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl backdrop-blur-sm border border-white/10 flex animate-dynamic">
+    <!-- Left Panel: User List -->
+    <div class="w-1/3 border-r border-white/10">
+        <div class="p-4 border-b border-white/10">
+            <h1 class="text-xl font-bold text-white">Contacts</h1>
+        </div>
+        <ul class="overflow-y-auto h-[calc(100%-4.5rem)]">
+            {% for user in messageable_users %}
+                <li class="p-4 hover:bg-white/10 cursor-pointer flex items-center space-x-3 user-contact" data-user-id="{{ user.id }}" data-username="{{ user.username }}">
+                    <img src="{{ user.avatar_url }}" alt="Avatar" class="w-10 h-10 rounded-full">
+                    <div>
+                        <p class="font-semibold text-white">{{ user.username }}</p>
+                        <p class="text-sm text-gray-400">{{ user.role.title() }}</p>
                     </div>
-                    <p class="text-gray-300">{{ msg.body }}</p>
-                    <p class="text-xs text-gray-500 mt-2 text-right">{{ msg.timestamp.strftime('%b %d, %Y at %I:%M %p') }}</p>
                 </li>
-            {% else %}
-                <li class="text-gray-400">No messages yet.</li>
             {% endfor %}
         </ul>
     </div>
+
+    <!-- Right Panel: Chat Window -->
+    <div class="w-2/3 flex flex-col">
+        <!-- Chat Header -->
+        <div id="chat-header" class="p-4 border-b border-white/10 flex items-center">
+            <h2 id="chat-with-username" class="text-xl font-bold text-white">Select a contact to start chatting</h2>
+        </div>
+
+        <!-- Message Area -->
+        <div id="message-area" class="flex-1 p-6 overflow-y-auto space-y-4">
+            <!-- Messages will be dynamically inserted here -->
+            <p id="no-chat-selected" class="text-gray-400 text-center mt-10">Your conversation will appear here.</p>
+        </div>
+
+        <!-- Message Input Form -->
+        <div id="message-form-container" class="p-4 border-t border-white/10 hidden">
+            <form id="message-form" class="flex items-center space-x-3">
+                <input type="hidden" id="recipient-id-input" name="recipient_id">
+                <input type="text" id="message-body-input" name="body" class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white placeholder-gray-400" placeholder="Type your message..." autocomplete="off">
+                <button type="submit" class="px-4 py-2 rounded-md text-white bg-indigo-600 hover:bg-indigo-700">Send</button>
+            </form>
+        </div>
+    </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const userContacts = document.querySelectorAll('.user-contact');
+    const chatHeader = document.getElementById('chat-header');
+    const chatUsername = document.getElementById('chat-with-username');
+    const messageArea = document.getElementById('message-area');
+    const noChatSelected = document.getElementById('no-chat-selected');
+    const messageFormContainer = document.getElementById('message-form-container');
+    const messageForm = document.getElementById('message-form');
+    const recipientIdInput = document.getElementById('recipient-id-input');
+    const messageBodyInput = document.getElementById('message-body-input');
+    const currentUserId = {{ current_user.id }};
+
+    userContacts.forEach(contact => {
+        contact.addEventListener('click', async () => {
+            const userId = contact.dataset.userId;
+            const username = contact.dataset.username;
+
+            // Update UI
+            chatUsername.textContent = `Chat with ${username}`;
+            noChatSelected.classList.add('hidden');
+            messageFormContainer.classList.remove('hidden');
+            recipientIdInput.value = userId;
+            messageBodyInput.focus();
+            messageArea.innerHTML = '<p class="text-gray-400">Loading conversation...</p>';
+
+            // Fetch conversation
+            try {
+                const response = await fetch(`/get_conversation/${userId}`);
+                const conversation = await response.json();
+                
+                messageArea.innerHTML = ''; // Clear loading message
+                if (conversation.length === 0) {
+                    messageArea.innerHTML = '<p class="text-gray-400 text-center">No messages yet. Start the conversation!</p>';
+                } else {
+                    conversation.forEach(msg => {
+                        const messageElement = document.createElement('div');
+                        const isSender = msg.sender_id === currentUserId;
+                        
+                        messageElement.className = `flex ${isSender ? 'justify-end' : 'justify-start'}`;
+                        messageElement.innerHTML = `
+                            <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isSender ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}">
+                                <p>${msg.body}</p>
+                                <p class="text-xs text-right mt-1 ${isSender ? 'text-indigo-200' : 'text-gray-400'}">${msg.timestamp}</p>
+                            </div>
+                        `;
+                        messageArea.appendChild(messageElement);
+                    });
+                }
+                messageArea.scrollTop = messageArea.scrollHeight; // Scroll to bottom
+            } catch (error) {
+                messageArea.innerHTML = '<p class="text-red-400">Error loading conversation.</p>';
+                console.error('Fetch error:', error);
+            }
+        });
+    });
+
+    // Handle sending new messages
+    messageForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const recipientId = recipientIdInput.value;
+        const body = messageBodyInput.value;
+
+        if (!recipientId || !body.trim()) return;
+
+        // Add message to UI immediately for a responsive feel
+        const messageElement = document.createElement('div');
+        messageElement.className = 'flex justify-end';
+        messageElement.innerHTML = `
+            <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-indigo-600 text-white">
+                <p>${body}</p>
+                <p class="text-xs text-right mt-1 text-indigo-200">Sending...</p>
+            </div>
+        `;
+        messageArea.appendChild(messageElement);
+        messageArea.scrollTop = messageArea.scrollHeight;
+        
+        const originalInput = messageBodyInput.value;
+        messageBodyInput.value = ''; // Clear input
+
+        // Send to server
+        try {
+            const formData = new FormData();
+            formData.append('recipient_id', recipientId);
+            formData.append('body', body);
+
+            const response = await fetch("{{ url_for('send_message') }}", {
+                method: 'POST',
+                body: formData,
+            });
+
+            // Reload the conversation to get the final message with timestamp
+            document.querySelector(`[data-user-id='${recipientId}']`).click();
+
+        } catch (error) {
+            console.error('Send message error:', error);
+            messageElement.querySelector('p:last-child').textContent = 'Failed to send';
+            messageBodyInput.value = originalInput; // Restore input on failure
+        }
+    });
+});
+</script>
 {% endblock %}

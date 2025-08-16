@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, Message, ActivityUpdate, CodeSnippet, JobOpening, JobApplication, CodeTestSubmission, ProblemStatement
@@ -7,11 +7,13 @@ import requests
 import time
 import os
 from datetime import datetime, timedelta
+from sqlalchemy import or_
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'a_very_secret_key_that_should_be_changed'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///devconnect.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
 
 db.init_app(app)
 bcrypt = Bcrypt(app)
@@ -20,6 +22,12 @@ login_manager.login_view = 'login_register'
 login_manager.login_message_category = 'info'
 
 RAPIDAPI_KEY = os.environ.get('RAPIDAPI_KEY', "0a6ba78971msh4c6e4bd030a7155p19e180jsnd30bdfc2386d")
+
+@app.before_request
+def before_request():
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(minutes=5)
+    session.modified = True
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -38,7 +46,7 @@ def role_required(roles):
         return decorated_view
     return wrapper
 
-# (Home, Contact, Login/Register, Logout routes remain the same)
+# (Home, Contact, Logout routes remain the same)
 @app.route('/')
 def home(): return render_template('home.html')
 @app.route('/contact')
@@ -66,6 +74,7 @@ def login_register():
             flash('Account created successfully! Please wait for admin approval.', 'success')
             return redirect(url_for('login_register'))
         if 'login' in request.form:
+            # UPDATED: Login logic with new message for inactive users
             email = request.form.get('email')
             password = request.form.get('password')
             user = User.query.filter_by(email=email).first()
@@ -74,6 +83,9 @@ def login_register():
                 return redirect(url_for('login_register'))
             if not user.is_approved:
                 flash('Your account has not been approved by an administrator yet.', 'warning')
+                return redirect(url_for('login_register'))
+            if not user.is_active:
+                flash('Your account is blocked by admin. Kindly contact admin by raising a support ticket or connect via WhatsApp messaging.', 'danger')
                 return redirect(url_for('login_register'))
             login_user(user, remember=True)
             return redirect(url_for('dashboard'))
@@ -95,28 +107,80 @@ def dashboard():
 @login_required
 def messages():
     if current_user.role == 'candidate':
-        messageable_users = User.query.filter(User.role.in_(['admin', 'developer'])).all()
+        messageable_users_dict = {}
+        admins = User.query.filter_by(role='admin').all()
+        for admin in admins:
+            messageable_users_dict[admin.id] = admin
+        if current_user.assigned_problem:
+            creator = current_user.assigned_problem.creator
+            if creator:
+                messageable_users_dict[creator.id] = creator
+        for contact in current_user.allowed_contacts:
+            messageable_users_dict[contact.id] = contact
+        messageable_users = list(messageable_users_dict.values())
     else:
         messageable_users = User.query.filter(User.id != current_user.id).all()
     return render_template('messages.html', messageable_users=messageable_users)
+
+@app.route('/get_conversation/<int:other_user_id>')
+@login_required
+def get_conversation(other_user_id):
+    messages = Message.query.filter(
+        or_(
+            (Message.sender_id == current_user.id) & (Message.recipient_id == other_user_id),
+            (Message.sender_id == other_user_id) & (Message.recipient_id == current_user.id)
+        )
+    ).order_by(Message.timestamp.asc()).all()
+    conversation = [
+        {
+            'sender_id': msg.sender_id,
+            'body': msg.body,
+            'timestamp': msg.timestamp.strftime('%b %d, %I:%M %p')
+        } for msg in messages
+    ]
+    return jsonify(conversation)
+
+@app.route('/manage_users')
+@login_required
+@role_required('admin')
+def manage_users():
+    users = User.query.order_by(User.id).all()
+    return render_template('manage_users.html', users=users)
+
+@app.route('/toggle_user_status/<int:user_id>')
+@login_required
+@role_required('admin')
+def toggle_user_status(user_id):
+    user_to_toggle = User.query.get_or_404(user_id)
+    if user_to_toggle.id == current_user.id:
+        flash('You cannot change your own status.', 'danger')
+        return redirect(url_for('manage_users'))
+    
+    user_to_toggle.is_active = not user_to_toggle.is_active
+    db.session.commit()
+    status = "activated" if user_to_toggle.is_active else "deactivated"
+    flash(f'User {user_to_toggle.username} has been {status}.', 'success')
+    return redirect(url_for('manage_users'))
+
 
 @app.route('/admin')
 @login_required
 @role_required('admin')
 def admin_dashboard():
     pending_users = User.query.filter_by(is_approved=False).all()
-    all_users = User.query.all()
     received_snippets = CodeSnippet.query.filter_by(recipient_id=current_user.id).order_by(CodeSnippet.timestamp.desc()).all()
     applications = JobApplication.query.order_by(JobApplication.applied_at.desc()).all()
     activities = ActivityUpdate.query.order_by(ActivityUpdate.timestamp.desc()).all()
     received_tests = CodeTestSubmission.query.filter_by(recipient_id=current_user.id).order_by(CodeTestSubmission.submitted_at.desc()).all()
     candidates = User.query.filter_by(role='candidate').all()
     problems = ProblemStatement.query.all()
+    developers = User.query.filter_by(role='developer').all()
     return render_template('admin_dashboard.html', 
-                           pending_users=pending_users, all_users=all_users, 
+                           pending_users=pending_users, 
                            received_snippets=received_snippets,
                            applications=applications, activities=activities,
-                           received_tests=received_tests, candidates=candidates, problems=problems)
+                           received_tests=received_tests, candidates=candidates, problems=problems,
+                           developers=developers)
 
 @app.route('/developer', methods=['GET', 'POST'])
 @login_required
@@ -163,12 +227,10 @@ def code_test():
         message = "No test has been assigned to you yet."
         return render_template('test_locked.html', message=message)
     if current_user.test_start_time and now < current_user.test_start_time:
-        # Convert stored UTC time to IST for display
         ist_start_time = current_user.test_start_time + timedelta(hours=5, minutes=30)
         message = f"Your test has been assigned but is not yet active. It will be available starting {ist_start_time.strftime('%b %d, %Y at %I:%M %p')} IST."
         return render_template('test_locked.html', message=message)
     if current_user.test_end_time and now > current_user.test_end_time:
-        # Convert stored UTC time to IST for display
         ist_end_time = current_user.test_end_time + timedelta(hours=5, minutes=30)
         message = f"The deadline for your assigned test has passed. The test was available until {ist_end_time.strftime('%b %d, %Y at %I:%M %p')} IST."
         return render_template('test_locked.html', message=message)
@@ -312,7 +374,6 @@ def create_problem():
         db.session.commit()
         flash('New problem statement created.', 'success')
     return redirect(request.referrer)
-
 @app.route('/assign_problem', methods=['POST'])
 @login_required
 @role_required(['admin', 'developer'])
@@ -321,33 +382,40 @@ def assign_problem():
     problem_id = request.form.get('problem_id')
     start_time_str = request.form.get('start_time')
     end_time_str = request.form.get('end_time')
-
     candidate = User.query.get(candidate_id)
     if not candidate or not problem_id or not start_time_str or not end_time_str:
         flash('Please select a candidate, a problem, and set both start and end times.', 'danger')
         return redirect(request.referrer)
-    
     try:
-        # Parse the local time input from the form, which we treat as IST
         start_time_ist = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M')
         end_time_ist = datetime.strptime(end_time_str, '%Y-%m-%dT%H:%M')
     except ValueError:
         flash('Invalid date/time format.', 'danger')
         return redirect(request.referrer)
-
-    # Convert from IST to UTC for database storage
     ist_offset = timedelta(hours=5, minutes=30)
     start_time_utc = start_time_ist - ist_offset
     end_time_utc = end_time_ist - ist_offset
-
     candidate.problem_statement_id = problem_id
     candidate.test_start_time = start_time_utc
     candidate.test_end_time = end_time_utc
     db.session.commit()
     flash(f'Problem assigned to {candidate.username}.', 'success')
-    
     return redirect(request.referrer)
-
+@app.route('/add_contact_for_candidate', methods=['POST'])
+@login_required
+@role_required('admin')
+def add_contact_for_candidate():
+    candidate_id = request.form.get('candidate_id')
+    developer_id = request.form.get('developer_id')
+    candidate = User.query.get(candidate_id)
+    developer = User.query.get(developer_id)
+    if candidate and developer and developer.role == 'developer':
+        candidate.allowed_contacts.append(developer)
+        db.session.commit()
+        flash(f'Developer {developer.username} added to {candidate.username}\'s contacts.', 'success')
+    else:
+        flash('Invalid selection. Please try again.', 'danger')
+    return redirect(url_for('admin_dashboard'))
 
 @app.context_processor
 def inject_messages():

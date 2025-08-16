@@ -119,27 +119,24 @@
     </div>
     <!-- Right Column -->
     <div class="space-y-8">
-        <!-- All Registered Users -->
+        <!-- Manage Candidate Contacts -->
         <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.3s;">
-             <h2 class="text-2xl font-bold text-white mb-4">All Registered Users</h2>
-            <ul class="space-y-3 max-h-96 overflow-y-auto pr-2">
-                {% for user in all_users %}
-                    <li class="p-3 bg-white/5 dark:bg-gray-700/20 rounded-lg flex items-center justify-between animate-stagger">
-                        <div class="flex items-center">
-                            <img src="{{ user.avatar_url }}" alt="Avatar" class="rounded-full w-10 h-10 mr-3">
-                            <div>
-                                <p class="font-semibold text-white">{{ user.username }}</p>
-                                <p class="text-sm text-gray-400">{{ user.role.title() }}</p>
-                            </div>
-                        </div>
-                        {% if user.is_approved %}
-                            <span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-100 rounded-full dark:bg-green-900 dark:text-green-200">Approved</span>
-                        {% else %}
-                            <span class="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-100 rounded-full dark:bg-yellow-900 dark:text-yellow-200">Pending</span>
-                        {% endif %}
-                    </li>
-                {% endfor %}
-            </ul>
+            <h2 class="text-2xl font-bold text-white mb-4">Manage Candidate Contacts</h2>
+            <form action="{{ url_for('add_contact_for_candidate') }}" method="POST" class="space-y-3">
+                <select name="candidate_id" required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                    <option value="">-- Select Candidate --</option>
+                    {% for candidate in candidates %}
+                        <option class="bg-gray-800" value="{{ candidate.id }}">{{ candidate.username }}</option>
+                    {% endfor %}
+                </select>
+                <select name="developer_id" required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                    <option value="">-- Select Developer --</option>
+                    {% for dev in developers %}
+                        <option class="bg-gray-800" value="{{ dev.id }}">{{ dev.username }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="w-full py-2 px-4 rounded-md text-white bg-purple-600 hover:bg-purple-700">Add Contact</button>
+            </form>
         </div>
     </div>
 </div>

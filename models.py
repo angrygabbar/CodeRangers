@@ -5,6 +5,12 @@ import uuid
 
 db = SQLAlchemy()
 
+# Association table for the many-to-many relationship
+candidate_contacts = db.Table('candidate_contacts',
+    db.Column('candidate_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('developer_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
+)
+
 class ProblemStatement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
@@ -22,9 +28,15 @@ class User(UserMixin, db.Model):
     avatar_url = db.Column(db.String(200), nullable=False, default='https://api.dicebear.com/8.x/initials/svg?seed=User')
     
     problem_statement_id = db.Column(db.Integer, db.ForeignKey('problem_statement.id'), nullable=True)
-    # NEW: Columns for test timing
     test_start_time = db.Column(db.DateTime, nullable=True)
     test_end_time = db.Column(db.DateTime, nullable=True)
+    # NEW: Column to track if the account is active or inactive
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+
+    allowed_contacts = db.relationship('User', secondary=candidate_contacts,
+                                       primaryjoin=(candidate_contacts.c.candidate_id == id),
+                                       secondaryjoin=(candidate_contacts.c.developer_id == id),
+                                       backref=db.backref('contact_for', lazy='dynamic'), lazy='dynamic')
 
     created_problems = db.relationship('ProblemStatement', foreign_keys=[ProblemStatement.created_by_id], backref='creator', lazy=True)
     sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy=True)
