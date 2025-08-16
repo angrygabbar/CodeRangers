@@ -1,8 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Message, ActivityUpdate, CodeSnippet, JobOpening, JobApplication
+from models import db, User, Message, ActivityUpdate, CodeSnippet, JobOpening, JobApplication, CodeTestSubmission, ProblemStatement
 from functools import wraps
+import requests
+import time
+import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'a_very_secret_key_that_should_be_changed'
@@ -15,76 +18,65 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login_register'
 login_manager.login_message_category = 'info'
 
+RAPIDAPI_KEY = os.environ.get('RAPIDAPI_KEY', "0a6ba78971msh4c6e4bd030a7155p19e180jsnd30bdfc2386d")
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-def role_required(role):
+def role_required(roles):
+    if not isinstance(roles, list):
+        roles = [roles]
     def wrapper(fn):
         @wraps(fn)
         def decorated_view(*args, **kwargs):
-            if not current_user.is_authenticated or current_user.role != role:
+            if not current_user.is_authenticated or current_user.role not in roles:
                 flash('You do not have permission to access this page.', 'danger')
                 return redirect(url_for('dashboard'))
             return fn(*args, **kwargs)
         return decorated_view
     return wrapper
 
+# (Home, Contact, Login/Register, Logout routes remain the same)
 @app.route('/')
-def home():
-    return render_template('home.html')
-
+def home(): return render_template('home.html')
 @app.route('/contact')
-def contact():
-    return render_template('contact.html')
-
+def contact(): return render_template('contact.html')
 @app.route('/login-register', methods=['GET', 'POST'])
 def login_register():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-
+    if current_user.is_authenticated: return redirect(url_for('dashboard'))
     if request.method == 'POST':
         if 'register' in request.form:
             username = request.form.get('username')
             email = request.form.get('email')
             password = request.form.get('password')
             role = request.form.get('role')
-
             if User.query.filter_by(email=email).first() or User.query.filter_by(username=username).first():
                 flash('Username or email already exists.', 'danger')
                 return redirect(url_for('login_register'))
-
             hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
             avatar_url = f'https://api.dicebear.com/8.x/initials/svg?seed={username}'
             new_user = User(username=username, email=email, password_hash=hashed_password, role=role, avatar_url=avatar_url)
-            
             if User.query.count() == 0:
                 new_user.role = 'admin'
                 new_user.is_approved = True
-
             db.session.add(new_user)
             db.session.commit()
             flash('Account created successfully! Please wait for admin approval.', 'success')
             return redirect(url_for('login_register'))
-
         if 'login' in request.form:
             email = request.form.get('email')
             password = request.form.get('password')
             user = User.query.filter_by(email=email).first()
-
             if not user or not bcrypt.check_password_hash(user.password_hash, password):
                 flash('Login failed. Please check your email and password.', 'danger')
                 return redirect(url_for('login_register'))
-            
             if not user.is_approved:
                 flash('Your account has not been approved by an administrator yet.', 'warning')
                 return redirect(url_for('login_register'))
-
             login_user(user, remember=True)
             return redirect(url_for('dashboard'))
-
     return render_template('login_register.html')
-
 @app.route('/logout')
 @login_required
 def logout():
@@ -94,12 +86,21 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    if current_user.role == 'admin':
-        return redirect(url_for('admin_dashboard'))
-    elif current_user.role == 'developer':
-        return redirect(url_for('developer_dashboard'))
-    else:
-        return redirect(url_for('candidate_dashboard'))
+    if current_user.role == 'admin': return redirect(url_for('admin_dashboard'))
+    elif current_user.role == 'developer': return redirect(url_for('developer_dashboard'))
+    else: return redirect(url_for('candidate_dashboard'))
+
+# --- NEW: Dedicated Messages Page ---
+@app.route('/messages')
+@login_required
+def messages():
+    # Logic to determine who the current user can message
+    if current_user.role == 'candidate':
+        messageable_users = User.query.filter(User.role.in_(['admin', 'developer'])).all()
+    else: # Admin and Developer can message anyone except themselves
+        messageable_users = User.query.filter(User.id != current_user.id).all()
+    
+    return render_template('messages.html', messageable_users=messageable_users)
 
 @app.route('/admin')
 @login_required
@@ -107,18 +108,17 @@ def dashboard():
 def admin_dashboard():
     pending_users = User.query.filter_by(is_approved=False).all()
     all_users = User.query.all()
-    messageable_users = User.query.filter(User.id != current_user.id).all() 
     received_snippets = CodeSnippet.query.filter_by(recipient_id=current_user.id).order_by(CodeSnippet.timestamp.desc()).all()
     applications = JobApplication.query.order_by(JobApplication.applied_at.desc()).all()
-    # NEW: Fetch all activities for the admin to see
     activities = ActivityUpdate.query.order_by(ActivityUpdate.timestamp.desc()).all()
+    received_tests = CodeTestSubmission.query.filter_by(recipient_id=current_user.id).order_by(CodeTestSubmission.submitted_at.desc()).all()
+    candidates = User.query.filter_by(role='candidate').all()
+    problems = ProblemStatement.query.all()
     return render_template('admin_dashboard.html', 
-                           pending_users=pending_users, 
-                           all_users=all_users, 
-                           messageable_users=messageable_users,
+                           pending_users=pending_users, all_users=all_users, 
                            received_snippets=received_snippets,
-                           applications=applications,
-                           activities=activities) # Pass activities to the template
+                           applications=applications, activities=activities,
+                           received_tests=received_tests, candidates=candidates, problems=problems)
 
 @app.route('/developer', methods=['GET', 'POST'])
 @login_required
@@ -132,29 +132,36 @@ def developer_dashboard():
             db.session.commit()
             flash('Activity posted!', 'success')
         return redirect(url_for('developer_dashboard'))
-        
     activities = ActivityUpdate.query.order_by(ActivityUpdate.timestamp.desc()).all()
-    other_users = User.query.filter(User.role != 'candidate', User.id != current_user.id).all()
     received_snippets = CodeSnippet.query.filter_by(recipient_id=current_user.id).order_by(CodeSnippet.timestamp.desc()).all()
+    received_tests = CodeTestSubmission.query.filter_by(recipient_id=current_user.id).order_by(CodeTestSubmission.submitted_at.desc()).all()
+    candidates = User.query.filter_by(role='candidate').all()
+    problems = ProblemStatement.query.all()
     return render_template('developer_dashboard.html', 
-                           activities=activities, 
-                           other_users=other_users,
-                           received_snippets=received_snippets)
+                           activities=activities,
+                           received_snippets=received_snippets, received_tests=received_tests,
+                           candidates=candidates, problems=problems)
 
 @app.route('/candidate')
 @login_required
 @role_required('candidate')
 def candidate_dashboard():
-    messageable_users = User.query.filter(User.role.in_(['admin', 'developer'])).all()
     open_jobs = JobOpening.query.filter_by(is_open=True).order_by(JobOpening.created_at.desc()).all()
     my_applications = JobApplication.query.filter_by(user_id=current_user.id).all()
     applied_job_ids = [app.job_id for app in my_applications]
     return render_template('candidate_dashboard.html', 
-                           messageable_users=messageable_users,
                            open_jobs=open_jobs,
-                           my_applications=my_applications,
-                           applied_job_ids=applied_job_ids)
+                           my_applications=my_applications, applied_job_ids=applied_job_ids)
 
+@app.route('/code_test')
+@login_required
+@role_required('candidate')
+def code_test():
+    messageable_users = User.query.filter(User.role.in_(['admin', 'developer'])).all()
+    return render_template('code_test.html', messageable_users=messageable_users)
+
+# (All other existing routes remain the same)
+# ...
 @app.route('/approve_user/<int:user_id>')
 @login_required
 @role_required('admin')
@@ -164,13 +171,11 @@ def approve_user(user_id):
     db.session.commit()
     flash(f'User {user.username} has been approved.', 'success')
     return redirect(url_for('admin_dashboard'))
-
 @app.route('/send_message', methods=['POST'])
 @login_required
 def send_message():
     recipient_id = request.form.get('recipient_id')
     body = request.form.get('body')
-    
     if not recipient_id or not body:
         flash('Message cannot be empty.', 'danger')
     else:
@@ -178,9 +183,8 @@ def send_message():
         db.session.add(msg)
         db.session.commit()
         flash('Message sent!', 'success')
-        
-    return redirect(request.referrer or url_for('dashboard'))
-
+    # Redirect back to the messages page after sending
+    return redirect(url_for('messages'))
 @app.route('/share_code', methods=['POST'])
 @login_required
 @role_required('candidate')
@@ -195,7 +199,6 @@ def share_code():
         db.session.commit()
         flash('Code snippet shared successfully!', 'success')
     return redirect(url_for('candidate_dashboard'))
-
 @app.route('/post_job', methods=['POST'])
 @login_required
 @role_required('admin')
@@ -210,7 +213,6 @@ def post_job():
     else:
         flash('Job title and description are required.', 'danger')
     return redirect(url_for('admin_dashboard'))
-
 @app.route('/apply_job/<int:job_id>')
 @login_required
 @role_required('candidate')
@@ -225,7 +227,6 @@ def apply_job(job_id):
         db.session.commit()
         flash('You have successfully applied for the job!', 'success')
     return redirect(url_for('candidate_dashboard'))
-
 @app.route('/accept_application/<int:app_id>')
 @login_required
 @role_required('admin')
@@ -235,7 +236,6 @@ def accept_application(app_id):
     db.session.commit()
     flash(f"Application from {application.candidate.username} for '{application.job.title}' has been accepted.", 'success')
     return redirect(url_for('admin_dashboard'))
-
 @app.route('/reject_application/<int:app_id>')
 @login_required
 @role_required('admin')
@@ -245,6 +245,73 @@ def reject_application(app_id):
     db.session.commit()
     flash(f"Application from {application.candidate.username} for '{application.job.title}' has been rejected.", 'warning')
     return redirect(url_for('admin_dashboard'))
+@app.route('/submit_code_test', methods=['POST'])
+@login_required
+@role_required('candidate')
+def submit_code_test():
+    recipient_id = request.form.get('recipient_id')
+    code = request.form.get('code')
+    output = request.form.get('output')
+    if not recipient_id or not code.strip():
+        flash('Please select a recipient and provide code.', 'danger')
+    else:
+        submission = CodeTestSubmission(
+            candidate_id=current_user.id,
+            recipient_id=recipient_id,
+            code=code,
+            output=output
+        )
+        db.session.add(submission)
+        db.session.commit()
+        flash('Your code test has been submitted successfully!', 'success')
+    return redirect(url_for('code_test'))
+@app.route('/run_code', methods=['POST'])
+@login_required
+def run_code():
+    code = request.json.get('code')
+    if not code:
+        return jsonify({'error': 'No code provided'}), 400
+    url = "https://online-java-compiler.p.rapidapi.com/compile"
+    payload = code
+    headers = {
+        "content-type": "text/plain",
+        "X-RapidAPI-Key": RAPIDAPI_KEY,
+        "X-RapidAPI-Host": "online-java-compiler.p.rapidapi.com"
+    }
+    try:
+        response = requests.post(url, data=payload.encode('utf-8'), headers=headers)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 500
+@app.route('/create_problem', methods=['POST'])
+@login_required
+@role_required(['admin', 'developer'])
+def create_problem():
+    title = request.form.get('problem_title')
+    description = request.form.get('problem_description')
+    if not title or not description:
+        flash('Title and description are required.', 'danger')
+    else:
+        new_problem = ProblemStatement(title=title, description=description, created_by_id=current_user.id)
+        db.session.add(new_problem)
+        db.session.commit()
+        flash('New problem statement created.', 'success')
+    return redirect(request.referrer)
+@app.route('/assign_problem', methods=['POST'])
+@login_required
+@role_required(['admin', 'developer'])
+def assign_problem():
+    candidate_id = request.form.get('candidate_id')
+    problem_id = request.form.get('problem_id')
+    candidate = User.query.get(candidate_id)
+    if candidate and problem_id:
+        candidate.problem_statement_id = problem_id
+        db.session.commit()
+        flash(f'Problem assigned to {candidate.username}.', 'success')
+    else:
+        flash('Please select a candidate and a problem.', 'danger')
+    return redirect(request.referrer)
 
 @app.context_processor
 def inject_messages():

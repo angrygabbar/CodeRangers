@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+{% block title %}Messages{% endblock %}
+{% block content %}
+<h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 animate-dynamic">Messages</h1>
+<p class="text-lg text-gray-600 dark:text-gray-400 mb-6 animate-dynamic" style="animation-delay: 0.1s;">
+    Communicate directly with other members of the portal.
+</p>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Left Column: Send a Message -->
+    <div class="lg:col-span-1 bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.2s;">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Send a New Message</h2>
+        <form action="{{ url_for('send_message') }}" method="POST" class="space-y-4">
+            <div>
+                <label for="recipient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">To:</label>
+                <select name="recipient_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
+                    <option value="">-- Select a user --</option>
+                    {% for user in messageable_users %}
+                        <option value="{{ user.id }}">{{ user.username }} ({{ user.role.title() }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="body" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message:</label>
+                <textarea name="body" rows="5" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition"></textarea>
+            </div>
+            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:scale-105">Send Message</button>
+        </form>
+    </div>
+
+    <!-- Right Column: Message History -->
+    <div class="lg:col-span-2 bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.3s;">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Message History</h2>
+        <ul class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+            {% for msg in messages %}
+                <li class="p-4 {% if msg.sender_id == current_user.id %}bg-indigo-50 dark:bg-indigo-900/50{% else %}bg-gray-50 dark:bg-gray-700/50{% endif %} rounded-lg animate-stagger">
+                    <div class="flex justify-between text-sm mb-1">
+                        <p class="font-semibold text-gray-800 dark:text-white">From: {{ msg.sender.username }}</p>
+                        <p class="font-semibold text-gray-800 dark:text-white">To: {{ msg.recipient.username }}</p>
+                    </div>
+                    <p class="text-gray-700 dark:text-gray-300">{{ msg.body }}</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-2 text-right">{{ msg.timestamp.strftime('%b %d, %Y at %I:%M %p') }}</p>
+                </li>
+            {% else %}
+                <li class="text-gray-500 dark:text-gray-400">No messages yet.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}
