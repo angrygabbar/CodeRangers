@@ -3,20 +3,20 @@
 {% block content %}
 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
     <!-- Login Form -->
-    <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-8 animate-fade-in">
-        <h2 class="text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">Login</h2>
+    <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-8 animate-dynamic backdrop-blur-sm border border-white/10">
+        <h2 class="text-3xl font-bold text-center text-white mb-6">Login</h2>
         <form method="POST" action="{{ url_for('login_register') }}" class="space-y-6">
             <input type="hidden" name="login" value="1">
             <div>
-                <label for="loginEmail" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email address</label>
+                <label for="loginEmail" class="block text-sm font-medium text-gray-300">Email address</label>
                 <div class="mt-1">
-                    <input type="email" id="loginEmail" name="email" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
+                    <input type="email" id="loginEmail" name="email" required class="appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition">
                 </div>
             </div>
             <div>
-                <label for="loginPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+                <label for="loginPassword" class="block text-sm font-medium text-gray-300">Password</label>
                 <div class="mt-1">
-                    <input type="password" id="loginPassword" name="password" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
+                    <input type="password" id="loginPassword" name="password" required class="appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition">
                 </div>
             </div>
             <div>
@@ -28,27 +28,27 @@
     </div>
 
     <!-- Registration Form -->
-    <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-8 animate-fade-in" style="animation-delay: 0.2s;">
-        <h2 class="text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">Create Account</h2>
+    <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-8 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.2s;">
+        <h2 class="text-3xl font-bold text-center text-white mb-6">Create Account</h2>
         <form method="POST" action="{{ url_for('login_register') }}" class="space-y-4">
             <input type="hidden" name="register" value="1">
             <div>
-                <label for="regUsername" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
-                <input type="text" id="regUsername" name="username" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
+                <label for="regUsername" class="block text-sm font-medium text-gray-300">Username</label>
+                <input type="text" id="regUsername" name="username" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition">
             </div>
             <div>
-                <label for="regEmail" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email address</label>
-                <input type="email" id="regEmail" name="email" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
+                <label for="regEmail" class="block text-sm font-medium text-gray-300">Email address</label>
+                <input type="email" id="regEmail" name="email" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition">
             </div>
             <div>
-                <label for="regPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                <input type="password" id="regPassword" name="password" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
+                <label for="regPassword" class="block text-sm font-medium text-gray-300">Password</label>
+                <input type="password" id="regPassword" name="password" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition">
             </div>
             <div>
-                <label for="role" class="block text-sm font-medium text-gray-700 dark:text-gray-300">I am a...</label>
-                <select id="role" name="role" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
-                    <option value="developer">Developer</option>
-                    <option value="candidate">Candidate</option>
+                <label for="role" class="block text-sm font-medium text-gray-300">I am a...</label>
+                <select id="role" name="role" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-700/50 text-white transition">
+                    <option class="bg-gray-800" value="developer">Developer</option>
+                    <option class="bg-gray-800" value="candidate">Candidate</option>
                 </select>
             </div>
             <div>
@@ -57,7 +57,7 @@
                 </button>
             </div>
         </form>
-        <p class="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+        <p class="mt-4 text-center text-sm text-gray-400">
             Note: All new accounts require administrator approval.
         </p>
     </div>

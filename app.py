@@ -6,7 +6,7 @@ from functools import wraps
 import requests
 import time
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'a_very_secret_key_that_should_be_changed'
@@ -144,34 +144,36 @@ def developer_dashboard():
 @login_required
 @role_required('candidate')
 def candidate_dashboard():
+    messageable_users = User.query.filter(User.role.in_(['admin', 'developer'])).all()
     open_jobs = JobOpening.query.filter_by(is_open=True).order_by(JobOpening.created_at.desc()).all()
     my_applications = JobApplication.query.filter_by(user_id=current_user.id).all()
     applied_job_ids = [app.job_id for app in my_applications]
     return render_template('candidate_dashboard.html', 
+                           messageable_users=messageable_users,
                            open_jobs=open_jobs,
-                           my_applications=my_applications, applied_job_ids=applied_job_ids)
+                           my_applications=my_applications,
+                           applied_job_ids=applied_job_ids)
 
 @app.route('/code_test')
 @login_required
 @role_required('candidate')
 def code_test():
     now = datetime.utcnow()
-    
     if not current_user.assigned_problem:
         message = "No test has been assigned to you yet."
         return render_template('test_locked.html', message=message)
-        
     if current_user.test_start_time and now < current_user.test_start_time:
-        message = f"Your test has been assigned but is not yet active. It will be available starting {current_user.test_start_time.strftime('%b %d, %Y at %I:%M %p')} UTC."
+        # Convert stored UTC time to IST for display
+        ist_start_time = current_user.test_start_time + timedelta(hours=5, minutes=30)
+        message = f"Your test has been assigned but is not yet active. It will be available starting {ist_start_time.strftime('%b %d, %Y at %I:%M %p')} IST."
         return render_template('test_locked.html', message=message)
-        
     if current_user.test_end_time and now > current_user.test_end_time:
-        message = f"The deadline for your assigned test has passed. The test was available until {current_user.test_end_time.strftime('%b %d, %Y at %I:%M %p')} UTC."
+        # Convert stored UTC time to IST for display
+        ist_end_time = current_user.test_end_time + timedelta(hours=5, minutes=30)
+        message = f"The deadline for your assigned test has passed. The test was available until {ist_end_time.strftime('%b %d, %Y at %I:%M %p')} IST."
         return render_template('test_locked.html', message=message)
-
     messageable_users = User.query.filter(User.role.in_(['admin', 'developer'])).all()
     return render_template('code_test.html', messageable_users=messageable_users)
-
 
 # (All other existing routes remain the same)
 # ...
@@ -326,15 +328,21 @@ def assign_problem():
         return redirect(request.referrer)
     
     try:
-        start_time = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M')
-        end_time = datetime.strptime(end_time_str, '%Y-%m-%dT%H:%M')
+        # Parse the local time input from the form, which we treat as IST
+        start_time_ist = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M')
+        end_time_ist = datetime.strptime(end_time_str, '%Y-%m-%dT%H:%M')
     except ValueError:
         flash('Invalid date/time format.', 'danger')
         return redirect(request.referrer)
 
+    # Convert from IST to UTC for database storage
+    ist_offset = timedelta(hours=5, minutes=30)
+    start_time_utc = start_time_ist - ist_offset
+    end_time_utc = end_time_ist - ist_offset
+
     candidate.problem_statement_id = problem_id
-    candidate.test_start_time = start_time
-    candidate.test_end_time = end_time
+    candidate.test_start_time = start_time_utc
+    candidate.test_end_time = end_time_utc
     db.session.commit()
     flash(f'Problem assigned to {candidate.username}.', 'success')
     

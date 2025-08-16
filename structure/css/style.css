@@ -9,29 +9,11 @@
 }
 .animate-pulse-button { animation: pulse 2s infinite; }
 
-/* Background Gradient Animation */
-@keyframes gradient-animation {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-.animated-gradient {
-    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-    background-size: 400% 400%;
-    animation: gradient-animation 15s ease infinite;
-}
-
-/* NEW: Floating animation for graphics */
+/* Floating animation for graphics */
 @keyframes float {
-	0% {
-		transform: translatey(0px);
-	}
-	50% {
-		transform: translatey(-15px);
-	}
-	100% {
-		transform: translatey(0px);
-	}
+	0% { transform: translatey(0px); }
+	50% { transform: translatey(-15px); }
+	100% { transform: translatey(0px); }
 }
 .animate-float {
     animation: float 6s ease-in-out infinite;
@@ -39,4 +21,14 @@
 
 body {
     font-family: sans-serif;
+    overflow-x: hidden;
+}
+
+/* Interactive Card Tilt Effect */
+.interactive-card {
+    transform-style: preserve-3d;
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.interactive-card:hover {
+    transform: perspective(1000px) rotateY(var(--rotateY)) rotateX(var(--rotateX)) scale3d(1.05, 1.05, 1.05);
 }

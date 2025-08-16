@@ -9,24 +9,28 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Three.js for 3D graphics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900">
-    <nav class="bg-white/80 dark:bg-gray-800/80 shadow-md sticky top-0 z-40 backdrop-blur-sm">
+<body class="bg-black">
+    <!-- Canvas for 3D background -->
+    <canvas id="bg-canvas" class="fixed top-0 left-0 w-full h-full z-[-1]"></canvas>
+
+    <nav class="bg-black/30 shadow-md sticky top-0 z-40 backdrop-blur-sm border-b border-white/10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <a class="flex items-center cursor-pointer" href="{{ url_for('home') }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-indigo-500"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
-                    <h1 class="ml-3 text-2xl font-bold text-gray-900 dark:text-white">DevConnect Hub</h1>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-indigo-400"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                    <h1 class="ml-3 text-2xl font-bold text-white">DevConnect Hub</h1>
                 </a>
                 <div class="hidden md:flex items-center space-x-1">
-                    <a href="{{ url_for('home') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Home</a>
-                    <a href="{{ url_for('contact') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Contact Us</a>
+                    <a href="{{ url_for('home') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Home</a>
+                    <a href="{{ url_for('contact') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Contact Us</a>
                     {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('dashboard') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Dashboard</a>
-                        <!-- NEW: Messages Link -->
-                        <a href="{{ url_for('messages') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Messages</a>
+                        <a href="{{ url_for('dashboard') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Dashboard</a>
+                        <a href="{{ url_for('messages') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Messages</a>
                         {% if current_user.role == 'candidate' %}
-                            <a href="{{ url_for('code_test') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Code Test</a>
+                            <a href="{{ url_for('code_test') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Code Test</a>
                         {% endif %}
                     {% endif %}
                 </div>
@@ -40,7 +44,7 @@
             </div>
         </div>
     </nav>
-    <main class="p-4 sm:p-6 lg:p-8">
+    <main class="p-4 sm:p-6 lg:p-8 relative z-10">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -60,6 +64,62 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- CORRECTED 3D Starfield Background ---
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('bg-canvas'), antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 1); // Ensure background is black
+
+            const starGeometry = new THREE.BufferGeometry();
+            const starCount = 10000;
+            const posArray = new Float32Array(starCount * 3);
+
+            for (let i = 0; i < starCount * 3; i++) {
+                // Spherical distribution for a better "space" feel
+                const u = Math.random();
+                const v = Math.random();
+                const theta = 2 * Math.PI * u;
+                const phi = Math.acos(2 * v - 1);
+                const r = Math.cbrt(Math.random()) * 2.5; // Cube root for uniform distribution
+                posArray[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+                posArray[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+                posArray[i * 3 + 2] = r * Math.cos(phi);
+            }
+
+            starGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const starMaterial = new THREE.PointsMaterial({ size: 0.01, color: 0xffffff });
+            const starMesh = new THREE.Points(starGeometry, starMaterial);
+            scene.add(starMesh);
+
+            camera.position.z = 1;
+
+            let mouseX = 0, mouseY = 0;
+            document.addEventListener('mousemove', (event) => {
+                mouseX = event.clientX;
+                mouseY = event.clientY;
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                starMesh.rotation.y += 0.0001;
+                starMesh.rotation.x += 0.00005;
+                if (mouseX > 0) {
+                    camera.position.x += (mouseX - window.innerWidth / 2 - camera.position.x) * 0.0001;
+                    camera.position.y += (-(mouseY - window.innerHeight / 2) - camera.position.y) * 0.0001;
+                    camera.lookAt(scene.position);
+                }
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // --- Dynamic Entrance Animations ---
             const animations = ['animate__fadeInUp', 'animate__fadeInDown', 'animate__fadeInLeft', 'animate__fadeInRight', 'animate__zoomIn'];
             const elementsToAnimate = document.querySelectorAll('.animate-dynamic');
             elementsToAnimate.forEach(el => {
@@ -74,6 +134,20 @@
                 item.style.animationDelay = `${index * 120}ms`;
                 item.classList.add('animate__animated', 'animate__fadeInUp');
             });
+
+            // --- Inactivity Logout Logic ---
+            {% if current_user.is_authenticated %}
+            let inactivityTimer;
+            const logoutUser = () => { window.location.href = "{{ url_for('logout') }}"; };
+            const resetTimer = () => {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = setTimeout(logoutUser, 900000); 
+            };
+            window.onload = resetTimer;
+            document.onmousemove = resetTimer;
+            document.onkeypress = resetTimer;
+            document.onclick = resetTimer;
+            {% endif %}
         });
     </script>
 </body>

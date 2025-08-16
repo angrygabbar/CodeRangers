@@ -1,44 +1,44 @@
 {% extends "layout.html" %}
 {% block title %}Admin Dashboard{% endblock %}
 {% block content %}
-<h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 animate-dynamic">Admin Dashboard</h1>
+<h1 class="text-3xl font-bold text-white mb-6 animate-dynamic">Admin Dashboard</h1>
 
 <!-- Coding Challenge Management Section -->
-<div class="mb-8 bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic">
-    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Coding Challenge Management</h2>
+<div class="mb-8 bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
+    <h2 class="text-2xl font-bold text-white mb-4">Coding Challenge Management</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <!-- Create New Problem -->
         <div>
-            <h3 class="text-lg font-semibold mb-2 dark:text-white">Create New Problem</h3>
+            <h3 class="text-lg font-semibold mb-2 text-white">Create New Problem</h3>
             <form action="{{ url_for('create_problem') }}" method="POST" class="space-y-3">
-                <input type="text" name="problem_title" placeholder="Problem Title" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                <textarea name="problem_description" rows="3" placeholder="Problem Description..." required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+                <input type="text" name="problem_title" placeholder="Problem Title" required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white placeholder-gray-400">
+                <textarea name="problem_description" rows="3" placeholder="Problem Description..." required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white placeholder-gray-400"></textarea>
                 <button type="submit" class="w-full py-2 px-4 rounded-md text-white bg-blue-600 hover:bg-blue-700">Create Problem</button>
             </form>
         </div>
         <!-- Assign Problem to Candidate -->
         <div>
-            <h3 class="text-lg font-semibold mb-2 dark:text-white">Assign Problem to Candidate</h3>
+            <h3 class="text-lg font-semibold mb-2 text-white">Assign Problem to Candidate</h3>
             <form action="{{ url_for('assign_problem') }}" method="POST" class="space-y-3">
-                <select name="candidate_id" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <select name="candidate_id" required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
                     <option value="">-- Select Candidate --</option>
                     {% for candidate in candidates %}
-                        <option value="{{ candidate.id }}">{{ candidate.username }}</option>
+                        <option class="bg-gray-800" value="{{ candidate.id }}">{{ candidate.username }}</option>
                     {% endfor %}
                 </select>
-                <select name="problem_id" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <select name="problem_id" required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
                     <option value="">-- Select Problem --</option>
                     {% for problem in problems %}
-                        <option value="{{ problem.id }}">{{ problem.title }}</option>
+                        <option class="bg-gray-800" value="{{ problem.id }}">{{ problem.title }}</option>
                     {% endfor %}
                 </select>
                 <div>
-                    <label class="text-sm font-medium dark:text-gray-300">Start Time (UTC)</label>
-                    <input type="datetime-local" name="start_time" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <label class="text-sm font-medium text-gray-300">Start Time (IST)</label>
+                    <input type="datetime-local" name="start_time" required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
                 </div>
                 <div>
-                    <label class="text-sm font-medium dark:text-gray-300">End Time (UTC)</label>
-                    <input type="datetime-local" name="end_time" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <label class="text-sm font-medium text-gray-300">End Time (IST)</label>
+                    <input type="datetime-local" name="end_time" required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
                 </div>
                 <button type="submit" class="w-full py-2 px-4 rounded-md text-white bg-green-600 hover:bg-green-700">Assign Problem</button>
             </form>
@@ -50,32 +50,32 @@
     <!-- Left Column -->
     <div class="space-y-8">
         <!-- Post a Job Opening -->
-        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Post a New Job Opening</h2>
+        <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
+            <h2 class="text-2xl font-bold text-white mb-4">Post a New Job Opening</h2>
             <form action="{{ url_for('post_job') }}" method="POST" class="space-y-4">
                 <div>
-                    <label for="job_title" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Job Title</label>
-                    <input type="text" name="job_title" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
+                    <label for="job_title" class="block text-sm font-medium text-gray-300">Job Title</label>
+                    <input type="text" name="job_title" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition">
                 </div>
                 <div>
-                    <label for="job_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Job Description</label>
-                    <textarea name="job_description" rows="4" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition"></textarea>
+                    <label for="job_description" class="block text-sm font-medium text-gray-300">Job Description</label>
+                    <textarea name="job_description" rows="4" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition"></textarea>
                 </div>
                 <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300 transform hover:scale-105">Post Job</button>
             </form>
         </div>
         <!-- Pending Approvals -->
-        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.1s;">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Pending Approvals</h2>
+        <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.1s;">
+            <h2 class="text-2xl font-bold text-white mb-4">Pending Approvals</h2>
             {% if pending_users %}
                 <ul class="space-y-3">
                     {% for user in pending_users %}
-                        <li class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between animate-stagger">
+                        <li class="p-3 bg-white/5 dark:bg-gray-700/20 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between animate-stagger">
                             <div class="flex items-center mb-2 sm:mb-0">
                                 <img src="{{ user.avatar_url }}" alt="Avatar" class="rounded-full w-10 h-10 mr-3">
                                 <div>
-                                    <p class="font-semibold text-gray-800 dark:text-white">{{ user.username }}</p>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ user.role.title() }}</p>
+                                    <p class="font-semibold text-white">{{ user.username }}</p>
+                                    <p class="text-sm text-gray-400">{{ user.role.title() }}</p>
                                 </div>
                             </div>
                             <div class="flex-shrink-0">
@@ -85,20 +85,20 @@
                     {% endfor %}
                 </ul>
             {% else %}
-                <p class="text-gray-500 dark:text-gray-400">No pending user approvals.</p>
+                <p class="text-gray-400">No pending user approvals.</p>
             {% endif %}
         </div>
         <!-- Incoming Job Applications -->
-        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.2s;">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Incoming Job Applications</h2>
+        <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.2s;">
+            <h2 class="text-2xl font-bold text-white mb-4">Incoming Job Applications</h2>
             {% if applications %}
                 <ul class="space-y-3 max-h-96 overflow-y-auto pr-2">
                     {% for app in applications %}
-                        <li class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-stagger">
+                        <li class="p-3 bg-white/5 dark:bg-gray-700/20 rounded-lg animate-stagger">
                            <div class="flex items-start justify-between">
                                 <div>
-                                    <p class="font-bold text-gray-800 dark:text-white">{{ app.job.title }}</p>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">Applied by: <strong class="dark:text-white">{{ app.candidate.username }}</strong></p>
+                                    <p class="font-bold text-white">{{ app.job.title }}</p>
+                                    <p class="text-sm text-gray-400">Applied by: <strong class="text-white">{{ app.candidate.username }}</strong></p>
                                 </div>
                                 {% if app.status == 'pending' %}
                                     <div class="flex-shrink-0 flex space-x-2">
@@ -113,23 +113,23 @@
                     {% endfor %}
                 </ul>
             {% else %}
-                <p class="text-gray-500 dark:text-gray-400">No new job applications.</p>
+                <p class="text-gray-400">No new job applications.</p>
             {% endif %}
         </div>
     </div>
     <!-- Right Column -->
     <div class="space-y-8">
         <!-- All Registered Users -->
-        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.3s;">
-             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">All Registered Users</h2>
+        <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.3s;">
+             <h2 class="text-2xl font-bold text-white mb-4">All Registered Users</h2>
             <ul class="space-y-3 max-h-96 overflow-y-auto pr-2">
                 {% for user in all_users %}
-                    <li class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex items-center justify-between animate-stagger">
+                    <li class="p-3 bg-white/5 dark:bg-gray-700/20 rounded-lg flex items-center justify-between animate-stagger">
                         <div class="flex items-center">
                             <img src="{{ user.avatar_url }}" alt="Avatar" class="rounded-full w-10 h-10 mr-3">
                             <div>
-                                <p class="font-semibold text-gray-800 dark:text-white">{{ user.username }}</p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ user.role.title() }}</p>
+                                <p class="font-semibold text-white">{{ user.username }}</p>
+                                <p class="text-sm text-gray-400">{{ user.role.title() }}</p>
                             </div>
                         </div>
                         {% if user.is_approved %}
@@ -144,33 +144,33 @@
     </div>
 </div>
 <!-- Received Code Snippets Section -->
-<div class="mt-8 bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.5s;">
-    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Received Code Snippets</h2>
+<div class="mt-8 bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.5s;">
+    <h2 class="text-2xl font-bold text-white mb-4">Received Code Snippets</h2>
     <div class="space-y-6">
         {% for snippet in received_snippets %}
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 animate-stagger">
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">From: <strong class="text-gray-800 dark:text-white">{{ snippet.snippet_sender.username }}</strong> on {{ snippet.timestamp.strftime('%b %d, %Y') }}</p>
+            <div class="bg-white/5 dark:bg-gray-700/20 rounded-lg p-4 animate-stagger">
+                <p class="text-sm text-gray-400 mb-2">From: <strong class="text-white">{{ snippet.snippet_sender.username }}</strong> on {{ snippet.timestamp.strftime('%b %d, %Y') }}</p>
                 <pre><code class="language-java">{{ snippet.code }}</code></pre>
             </div>
         {% else %}
-            <p class="text-gray-500 dark:text-gray-400">No code snippets have been shared with you.</p>
+            <p class="text-gray-400">No code snippets have been shared with you.</p>
         {% endfor %}
     </div>
 </div>
 <!-- Received Code Tests Section -->
-<div class="mt-8 bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.6s;">
-    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Received Code Test Submissions</h2>
+<div class="mt-8 bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.6s;">
+    <h2 class="text-2xl font-bold text-white mb-4">Received Code Test Submissions</h2>
     <div class="space-y-6">
         {% for test in received_tests %}
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 animate-stagger">
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">From: <strong class="text-gray-800 dark:text-white">{{ test.candidate_submitter.username }}</strong> on {{ test.submitted_at.strftime('%b %d, %Y') }}</p>
-                <h3 class="font-semibold text-gray-800 dark:text-white mt-4">Submitted Code:</h3>
+            <div class="bg-white/5 dark:bg-gray-700/20 rounded-lg p-4 animate-stagger">
+                <p class="text-sm text-gray-400 mb-2">From: <strong class="text-white">{{ test.candidate_submitter.username }}</strong> on {{ test.submitted_at.strftime('%b %d, %Y') }}</p>
+                <h3 class="font-semibold text-white mt-4">Submitted Code:</h3>
                 <pre><code class="language-java">{{ test.code }}</code></pre>
-                <h3 class="font-semibold text-gray-800 dark:text-white mt-4">Output:</h3>
+                <h3 class="font-semibold text-white mt-4">Output:</h3>
                 <pre class="bg-gray-900 text-white p-2 rounded-md"><code class="language-bash">{{ test.output }}</code></pre>
             </div>
         {% else %}
-            <p class="text-gray-500 dark:text-gray-400">No code tests have been submitted to you.</p>
+            <p class="text-gray-400">No code tests have been submitted to you.</p>
         {% endfor %}
     </div>
 </div>
