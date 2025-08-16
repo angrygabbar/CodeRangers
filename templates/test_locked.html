@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% block title %}Code Test Unavailable{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto text-center bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-8 md:p-12 animate-dynamic">
+    <div class="w-16 h-16 mx-auto text-yellow-500">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+    </div>
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mt-4">Code Test Not Available</h1>
+    <p class="text-lg text-gray-600 dark:text-gray-300 mt-4">
+        {{ message }}
+    </p>
+    <div class="mt-8">
+        <a href="{{ url_for('dashboard') }}" class="inline-flex items-center justify-center px-6 py-2 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+            Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

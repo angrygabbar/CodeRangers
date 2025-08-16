@@ -5,14 +5,11 @@ import uuid
 
 db = SQLAlchemy()
 
-# NEW: ProblemStatement Model
 class ProblemStatement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    
-    # FIX: Explicitly define the foreign key for the 'users' relationship
     users = db.relationship('User', foreign_keys='User.problem_statement_id', backref='assigned_problem', lazy=True)
 
 class User(UserMixin, db.Model):
@@ -24,12 +21,12 @@ class User(UserMixin, db.Model):
     is_approved = db.Column(db.Boolean, default=False, nullable=False)
     avatar_url = db.Column(db.String(200), nullable=False, default='https://api.dicebear.com/8.x/initials/svg?seed=User')
     
-    # This is the foreign key that links a User to their assigned problem
     problem_statement_id = db.Column(db.Integer, db.ForeignKey('problem_statement.id'), nullable=True)
+    # NEW: Columns for test timing
+    test_start_time = db.Column(db.DateTime, nullable=True)
+    test_end_time = db.Column(db.DateTime, nullable=True)
 
-    # NEW: Add a relationship to easily find the creator of a problem
     created_problems = db.relationship('ProblemStatement', foreign_keys=[ProblemStatement.created_by_id], backref='creator', lazy=True)
-
     sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy=True)
     received_messages = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient', lazy=True)
     activity_updates = db.relationship('ActivityUpdate', backref='author', lazy=True)

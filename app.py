@@ -6,6 +6,7 @@ from functools import wraps
 import requests
 import time
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'a_very_secret_key_that_should_be_changed'
@@ -90,16 +91,13 @@ def dashboard():
     elif current_user.role == 'developer': return redirect(url_for('developer_dashboard'))
     else: return redirect(url_for('candidate_dashboard'))
 
-# --- NEW: Dedicated Messages Page ---
 @app.route('/messages')
 @login_required
 def messages():
-    # Logic to determine who the current user can message
     if current_user.role == 'candidate':
         messageable_users = User.query.filter(User.role.in_(['admin', 'developer'])).all()
-    else: # Admin and Developer can message anyone except themselves
+    else:
         messageable_users = User.query.filter(User.id != current_user.id).all()
-    
     return render_template('messages.html', messageable_users=messageable_users)
 
 @app.route('/admin')
@@ -157,8 +155,23 @@ def candidate_dashboard():
 @login_required
 @role_required('candidate')
 def code_test():
+    now = datetime.utcnow()
+    
+    if not current_user.assigned_problem:
+        message = "No test has been assigned to you yet."
+        return render_template('test_locked.html', message=message)
+        
+    if current_user.test_start_time and now < current_user.test_start_time:
+        message = f"Your test has been assigned but is not yet active. It will be available starting {current_user.test_start_time.strftime('%b %d, %Y at %I:%M %p')} UTC."
+        return render_template('test_locked.html', message=message)
+        
+    if current_user.test_end_time and now > current_user.test_end_time:
+        message = f"The deadline for your assigned test has passed. The test was available until {current_user.test_end_time.strftime('%b %d, %Y at %I:%M %p')} UTC."
+        return render_template('test_locked.html', message=message)
+
     messageable_users = User.query.filter(User.role.in_(['admin', 'developer'])).all()
     return render_template('code_test.html', messageable_users=messageable_users)
+
 
 # (All other existing routes remain the same)
 # ...
@@ -183,7 +196,6 @@ def send_message():
         db.session.add(msg)
         db.session.commit()
         flash('Message sent!', 'success')
-    # Redirect back to the messages page after sending
     return redirect(url_for('messages'))
 @app.route('/share_code', methods=['POST'])
 @login_required
@@ -298,20 +310,36 @@ def create_problem():
         db.session.commit()
         flash('New problem statement created.', 'success')
     return redirect(request.referrer)
+
 @app.route('/assign_problem', methods=['POST'])
 @login_required
 @role_required(['admin', 'developer'])
 def assign_problem():
     candidate_id = request.form.get('candidate_id')
     problem_id = request.form.get('problem_id')
+    start_time_str = request.form.get('start_time')
+    end_time_str = request.form.get('end_time')
+
     candidate = User.query.get(candidate_id)
-    if candidate and problem_id:
-        candidate.problem_statement_id = problem_id
-        db.session.commit()
-        flash(f'Problem assigned to {candidate.username}.', 'success')
-    else:
-        flash('Please select a candidate and a problem.', 'danger')
+    if not candidate or not problem_id or not start_time_str or not end_time_str:
+        flash('Please select a candidate, a problem, and set both start and end times.', 'danger')
+        return redirect(request.referrer)
+    
+    try:
+        start_time = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M')
+        end_time = datetime.strptime(end_time_str, '%Y-%m-%dT%H:%M')
+    except ValueError:
+        flash('Invalid date/time format.', 'danger')
+        return redirect(request.referrer)
+
+    candidate.problem_statement_id = problem_id
+    candidate.test_start_time = start_time
+    candidate.test_end_time = end_time
+    db.session.commit()
+    flash(f'Problem assigned to {candidate.username}.', 'success')
+    
     return redirect(request.referrer)
+
 
 @app.context_processor
 def inject_messages():

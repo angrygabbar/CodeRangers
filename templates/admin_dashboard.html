@@ -32,6 +32,14 @@
                         <option value="{{ problem.id }}">{{ problem.title }}</option>
                     {% endfor %}
                 </select>
+                <div>
+                    <label class="text-sm font-medium dark:text-gray-300">Start Time (UTC)</label>
+                    <input type="datetime-local" name="start_time" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <div>
+                    <label class="text-sm font-medium dark:text-gray-300">End Time (UTC)</label>
+                    <input type="datetime-local" name="end_time" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
                 <button type="submit" class="w-full py-2 px-4 rounded-md text-white bg-green-600 hover:bg-green-700">Assign Problem</button>
             </form>
         </div>
@@ -135,7 +143,6 @@
         </div>
     </div>
 </div>
-
 <!-- Received Code Snippets Section -->
 <div class="mt-8 bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.5s;">
     <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Received Code Snippets</h2>

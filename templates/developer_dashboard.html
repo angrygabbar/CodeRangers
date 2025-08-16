@@ -3,7 +3,7 @@
 {% block content %}
 <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 animate-dynamic">Developer Dashboard</h1>
 
-<!-- (Existing content for Problem Management, Activity Feed, Messaging, etc. remains here) -->
+<!-- Coding Challenge Management Section -->
 <div class="mb-8 bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic">
     <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Coding Challenge Management</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -32,6 +32,14 @@
                         <option value="{{ problem.id }}">{{ problem.title }}</option>
                     {% endfor %}
                 </select>
+                <div>
+                    <label class="text-sm font-medium dark:text-gray-300">Start Time (UTC)</label>
+                    <input type="datetime-local" name="start_time" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <div>
+                    <label class="text-sm font-medium dark:text-gray-300">End Time (UTC)</label>
+                    <input type="datetime-local" name="end_time" required class="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
                 <button type="submit" class="w-full py-2 px-4 rounded-md text-white bg-green-600 hover:bg-green-700">Assign Problem</button>
             </form>
         </div>
@@ -39,7 +47,36 @@
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <!-- (Other sections like Activity Feed and Messaging remain here) -->
+    <!-- Main Column: Activity Feed -->
+    <div class="lg:col-span-2 space-y-8">
+        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Post a Project Update</h2>
+            <form method="POST" action="{{ url_for('developer_dashboard') }}">
+                <textarea class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white transition" name="activity_content" rows="3" placeholder="Share what you're working on..."></textarea>
+                <button type="submit" class="mt-3 inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:scale-105">Post Update</button>
+            </form>
+        </div>
+        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.2s;">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Team Activity Feed</h2>
+            <ul class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                {% for activity in activities %}
+                <li class="flex items-start space-x-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-stagger">
+                    <img src="{{ activity.author.avatar_url }}" alt="Avatar" class="rounded-full w-12 h-12 flex-shrink-0">
+                    <div>
+                        <p class="font-semibold text-gray-800 dark:text-white">{{ activity.author.username }}</p>
+                        <p class="text-gray-700 dark:text-gray-300 mt-1">{{ activity.content }}</p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">{{ activity.timestamp.strftime('%b %d, %Y at %I:%M %p') }}</p>
+                    </div>
+                </li>
+                {% else %}
+                    <li class="text-gray-500 dark:text-gray-400">No activity updates yet.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <!-- Right Column is now clear -->
+    <div class="space-y-8">
+    </div>
 </div>
 
 <!-- Received Code Snippets Section -->
@@ -57,7 +94,7 @@
     </div>
 </div>
 
-<!-- CORRECTED: Received Code Tests Section -->
+<!-- Received Code Tests Section -->
 <div class="mt-8 bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.5s;">
     <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Received Code Test Submissions</h2>
     <div class="space-y-6">
