@@ -46,6 +46,7 @@
             <pre id="outputConsole" class="whitespace-pre-wrap h-96 overflow-y-auto"></pre>
         </div>
     </div>
+    <!-- RESTORED: Run and Submit buttons -->
     <div class="mt-6 flex justify-end space-x-4 animate-dynamic" style="animation-delay: 0.4s;">
         <button type="button" id="runCodeBtn" class="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">Run Code</button>
         <button type="submit" class="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Submit Test</button>
@@ -67,7 +68,8 @@
             const response = await fetch("{{ url_for('run_code') }}", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: code }),
+                // Send 'java' as the language
+                body: JSON.stringify({ code: code, language: 'java' }),
             });
 
             if (!response.ok) {
@@ -77,14 +79,27 @@
             const result = await response.json();
             let finalOutput = "";
 
-            if (result.error) {
-                finalOutput += "--- ERROR ---\n" + result.error + "\n\n";
-            } else if (result.output) {
-                finalOutput += "--- OUTPUT ---\n" + result.output + "\n\n";
+            const decodeBase64 = (str) => {
+                if (!str) return "";
+                try { return atob(str); } catch (e) { return str; }
+            };
+
+            const compileOutput = decodeBase64(result.compile_output);
+            const stderr = decodeBase64(result.stderr);
+            const stdout = decodeBase64(result.stdout);
+
+            if (compileOutput) {
+                finalOutput += "--- COMPILE ERROR ---\n" + compileOutput + "\n\n";
+            } else if (stderr) {
+                finalOutput += "--- RUNTIME ERROR ---\n" + stderr + "\n\n";
+            } else if (stdout) {
+                finalOutput += "--- OUTPUT ---\n" + stdout + "\n\n";
             } else {
-                finalOutput += "--- STATUS ---\nExecution finished with no output.\n\n";
+                finalOutput += "--- STATUS ---\n" + (result.status ? result.status.description : "Execution finished with no output.") + "\n\n";
             }
             
+            finalOutput += `Time: ${result.time || 'N/A'}s | Memory: ${result.memory || 'N/A'}KB`;
+
             outputConsole.textContent = finalOutput;
             outputInput.value = finalOutput;
 
