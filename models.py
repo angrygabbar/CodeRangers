@@ -2,21 +2,23 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
 import uuid
+# Removed the itsdangerous Serializer as it's no longer needed
 
 db = SQLAlchemy()
 
-# Association table for the many-to-many relationship
+# (Other models like ProblemStatement, candidate_contacts table, etc. remain the same)
+# ...
 candidate_contacts = db.Table('candidate_contacts',
     db.Column('candidate_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('developer_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
 )
-
 class ProblemStatement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     users = db.relationship('User', foreign_keys='User.problem_statement_id', backref='assigned_problem', lazy=True)
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -30,8 +32,19 @@ class User(UserMixin, db.Model):
     problem_statement_id = db.Column(db.Integer, db.ForeignKey('problem_statement.id'), nullable=True)
     test_start_time = db.Column(db.DateTime, nullable=True)
     test_end_time = db.Column(db.DateTime, nullable=True)
-    # NEW: Column to track if the account is active or inactive
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+
+    mobile_number = db.Column(db.String(20), nullable=True)
+    primary_skill = db.Column(db.String(100), nullable=True)
+    primary_skill_experience = db.Column(db.String(50), nullable=True)
+    secondary_skill = db.Column(db.String(100), nullable=True)
+    secondary_skill_experience = db.Column(db.String(50), nullable=True)
+    resume_filename = db.Column(db.String(200), nullable=True)
+
+    # NEW: Columns for secret question and answer
+    secret_question = db.Column(db.String(255), nullable=True)
+    secret_answer_hash = db.Column(db.String(128), nullable=True)
+
 
     allowed_contacts = db.relationship('User', secondary=candidate_contacts,
                                        primaryjoin=(candidate_contacts.c.candidate_id == id),
@@ -66,6 +79,7 @@ class CodeSnippet(db.Model):
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     code = db.Column(db.Text, nullable=False)
+    language = db.Column(db.String(50), nullable=False, default='java')
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
 
 class JobOpening(db.Model):
@@ -90,4 +104,5 @@ class CodeTestSubmission(db.Model):
     recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     code = db.Column(db.Text, nullable=False)
     output = db.Column(db.Text, nullable=True)
+    language = db.Column(db.String(50), nullable=False, default='java')
     submitted_at = db.Column(db.DateTime, index=True, default=datetime.utcnow)

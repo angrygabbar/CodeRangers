@@ -1,39 +1,40 @@
 {% extends "layout.html" %}
 {% block title %}Java Code Test{% endblock %}
 {% block content %}
-<h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 animate-dynamic">Java Coding Test</h1>
-
-<!-- NEW: Display Assigned Problem Statement -->
+<h1 class="text-3xl font-bold text-white mb-6 animate-dynamic">Java Coding Test</h1>
 {% if current_user.assigned_problem %}
-    <div class="mb-8 bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ current_user.assigned_problem.title }}</h2>
-        <p class="mt-2 text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{{ current_user.assigned_problem.description }}</p>
+    <div class="mb-8 bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
+        <h2 class="text-2xl font-bold text-white">{{ current_user.assigned_problem.title }}</h2>
+        <p class="mt-2 text-gray-300 whitespace-pre-wrap">{{ current_user.assigned_problem.description }}</p>
     </div>
 {% else %}
-    <p class="text-lg text-gray-600 dark:text-gray-400 mb-6 animate-dynamic" style="animation-delay: 0.1s;">
+    <p class="text-lg text-gray-300 mb-6 animate-dynamic" style="animation-delay: 0.1s;">
         No problem has been assigned to you yet. You can use this editor for practice.
     </p>
 {% endif %}
 
-
 <form action="{{ url_for('submit_code_test') }}" method="POST">
+    <!-- Hidden input for language, as it's always Java now -->
+    <input type="hidden" name="language" value="java">
+    
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- Code Editor -->
-        <div class="bg-white dark:bg-gray-800/50 rounded-lg shadow-xl p-6 animate-dynamic" style="animation-delay: 0.2s;">
+        <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.2s;">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Code Editor</h2>
+                <h2 class="text-2xl font-bold text-white">Code Editor</h2>
                 <div class="flex items-center space-x-2">
-                    <label for="recipient" class="text-sm font-medium text-gray-700 dark:text-gray-300">Submit to:</label>
-                    <select name="recipient_id" id="recipient" class="block pl-3 pr-8 py-1 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white transition">
+                    <label for="recipient" class="text-sm font-medium text-gray-300">Submit to:</label>
+                    <select name="recipient_id" id="recipient" class="block pl-3 pr-8 py-1 text-base border-gray-600 rounded-md bg-gray-700/50 text-white">
                         {% for user in messageable_users %}
-                            <option value="{{ user.id }}">{{ user.username }} ({{ user.role.title() }})</option>
+                            <option class="bg-gray-800" value="{{ user.id }}">{{ user.username }} ({{ user.role.title() }})</option>
                         {% endfor %}
                     </select>
                 </div>
             </div>
-            <textarea name="code" id="codeInput" rows="20" class="w-full font-mono text-sm p-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300" placeholder="public class Main...">public class Main {
+            <textarea name="code" id="codeInput" rows="20" class="w-full font-mono text-sm p-2 border border-gray-600 rounded-md shadow-sm bg-gray-900/50 text-gray-300" placeholder="public class Main...">public class Main {
     public static void main(String[] args) {
         // Your code here.
+        System.out.println("Hello, Java!");
     }
 }</textarea>
             <input type="hidden" name="output" id="outputInput">
@@ -52,7 +53,6 @@
 </form>
 
 <script>
-    // (The JavaScript for the compiler remains the same)
     document.getElementById('runCodeBtn').addEventListener('click', async () => {
         const code = document.getElementById('codeInput').value;
         const outputConsole = document.getElementById('outputConsole');

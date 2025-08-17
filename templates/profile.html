@@ -1,0 +1,119 @@
+{% extends "layout.html" %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8">
+    <!-- Profile Details Card -->
+    <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-8 animate-dynamic backdrop-blur-sm border border-white/10">
+        <h1 class="text-3xl font-bold text-white mb-6">My Profile</h1>
+        
+        <form action="{{ url_for('update_profile') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Basic Information -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Username</label>
+                    <input type="text" value="{{ current_user.username }}" readonly class="mt-1 w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-800/50 text-gray-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Email Address</label>
+                    <input type="email" value="{{ current_user.email }}" readonly class="mt-1 w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-800/50 text-gray-400">
+                </div>
+                <div>
+                    <label for="mobile_number" class="block text-sm font-medium text-gray-300">Mobile Number</label>
+                    <input type="tel" name="mobile_number" id="mobile_number" value="{{ current_user.mobile_number or '' }}" class="mt-1 w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                </div>
+            </div>
+            <hr class="border-gray-700">
+            <!-- Professional Information -->
+            <div>
+                <h2 class="text-xl font-semibold text-white mb-4">Professional Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="primary_skill" class="block text-sm font-medium text-gray-300">Primary Skill</label>
+                        <input type="text" name="primary_skill" id="primary_skill" value="{{ current_user.primary_skill or '' }}" class="mt-1 w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                    </div>
+                    <div>
+                        <label for="primary_skill_experience" class="block text-sm font-medium text-gray-300">Experience (Primary Skill)</label>
+                        <input type="text" name="primary_skill_experience" id="primary_skill_experience" value="{{ current_user.primary_skill_experience or '' }}" class="mt-1 w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                    </div>
+                    <div>
+                        <label for="secondary_skill" class="block text-sm font-medium text-gray-300">Secondary Skill</label>
+                        <input type="text" name="secondary_skill" id="secondary_skill" value="{{ current_user.secondary_skill or '' }}" class="mt-1 w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                    </div>
+                    <div>
+                        <label for="secondary_skill_experience" class="block text-sm font-medium text-gray-300">Experience (Secondary Skill)</label>
+                        <input type="text" name="secondary_skill_experience" id="secondary_skill_experience" value="{{ current_user.secondary_skill_experience or '' }}" class="mt-1 w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                    </div>
+                </div>
+            </div>
+
+            <!-- CORRECTED: Resume Upload (Conditional) -->
+            {% if current_user.role == 'candidate' %}
+            <hr class="border-gray-700">
+            <div>
+                <label for="resume" class="block text-sm font-medium text-gray-300">Upload Resume (PDF only)</label>
+                <input type="file" name="resume" id="resume" accept=".pdf" class="mt-1 block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-indigo-500/20 file:text-indigo-300 hover:file:bg-indigo-500/30">
+                {% if current_user.resume_filename %}
+                    <p class="text-sm text-green-400 mt-2">Current resume: {{ current_user.resume_filename }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="pt-4">
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                    Update Profile
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Security Question Card -->
+    <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-8 animate-dynamic backdrop-blur-sm border border-white/10">
+        <h2 class="text-2xl font-bold text-white mb-6">Security Question for Password Reset</h2>
+        <form action="{{ url_for('update_security_question') }}" method="POST" class="space-y-4">
+            <div>
+                <label for="secret_question" class="block text-sm font-medium text-gray-300">Select a Question</label>
+                <select name="secret_question" id="secret_question" required class="mt-1 w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                    <option value="">-- Select a question --</option>
+                    {% for question in secret_questions %}
+                        <option value="{{ question }}" {% if current_user.secret_question == question %}selected{% endif %}>{{ question }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="secret_answer" class="block text-sm font-medium text-gray-300">Your Answer</label>
+                <input type="password" name="secret_answer" id="secret_answer" required placeholder="Enter your secret answer" class="mt-1 w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                <p class="text-xs text-gray-400 mt-1">This will be used to verify your identity if you forget your password.</p>
+            </div>
+            <div class="pt-2">
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700">
+                    Update Security Question
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Change Password Card -->
+    <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-8 animate-dynamic backdrop-blur-sm border border-white/10">
+        <h2 class="text-2xl font-bold text-white mb-6">Change Password</h2>
+        <form action="{{ url_for('change_password') }}" method="POST" class="space-y-4">
+            <div>
+                <label for="old_password" class="block text-sm font-medium text-gray-300">Old Password</label>
+                <input type="password" name="old_password" id="old_password" required class="mt-1 w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+            </div>
+            <div>
+                <label for="new_password" class="block text-sm font-medium text-gray-300">New Password</label>
+                <input type="password" name="new_password" id="new_password" required class="mt-1 w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+            </div>
+            <div>
+                <label for="confirm_password" class="block text-sm font-medium text-gray-300">Confirm New Password</label>
+                <input type="password" name="confirm_password" id="confirm_password" required class="mt-1 w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+            </div>
+            <div class="pt-2">
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
+                    Change Password
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

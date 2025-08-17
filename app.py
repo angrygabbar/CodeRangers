@@ -8,12 +8,17 @@ import time
 import os
 from datetime import datetime, timedelta
 from sqlalchemy import or_
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'a_very_secret_key_that_should_be_changed'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///devconnect.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
+app.config['UPLOAD_FOLDER'] = 'static/resumes'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db.init_app(app)
 bcrypt = Bcrypt(app)
@@ -22,6 +27,15 @@ login_manager.login_view = 'login_register'
 login_manager.login_message_category = 'info'
 
 RAPIDAPI_KEY = os.environ.get('RAPIDAPI_KEY', "0a6ba78971msh4c6e4bd030a7155p19e180jsnd30bdfc2386d")
+
+# Predefined Secret Questions
+SECRET_QUESTIONS = [
+    "What was your first pet's name?",
+    "What is your mother's maiden name?",
+    "What was the name of your elementary school?",
+    "In what city were you born?",
+    "What is your favorite book?"
+]
 
 @app.before_request
 def before_request():
@@ -60,12 +74,13 @@ def login_register():
             email = request.form.get('email')
             password = request.form.get('password')
             role = request.form.get('role')
+            mobile_number = request.form.get('mobile_number')
             if User.query.filter_by(email=email).first() or User.query.filter_by(username=username).first():
                 flash('Username or email already exists.', 'danger')
                 return redirect(url_for('login_register'))
             hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
             avatar_url = f'https://api.dicebear.com/8.x/initials/svg?seed={username}'
-            new_user = User(username=username, email=email, password_hash=hashed_password, role=role, avatar_url=avatar_url)
+            new_user = User(username=username, email=email, password_hash=hashed_password, role=role, avatar_url=avatar_url, mobile_number=mobile_number)
             if User.query.count() == 0:
                 new_user.role = 'admin'
                 new_user.is_approved = True
@@ -74,7 +89,6 @@ def login_register():
             flash('Account created successfully! Please wait for admin approval.', 'success')
             return redirect(url_for('login_register'))
         if 'login' in request.form:
-            # UPDATED: Login logic with new message for inactive users
             email = request.form.get('email')
             password = request.form.get('password')
             user = User.query.filter_by(email=email).first()
@@ -160,6 +174,127 @@ def toggle_user_status(user_id):
     db.session.commit()
     status = "activated" if user_to_toggle.is_active else "deactivated"
     flash(f'User {user_to_toggle.username} has been {status}.', 'success')
+    return redirect(url_for('manage_users'))
+
+@app.route('/profile')
+@login_required
+def profile():
+    return render_template('profile.html', secret_questions=SECRET_QUESTIONS)
+
+@app.route('/update_profile', methods=['POST'])
+@login_required
+def update_profile():
+    current_user.mobile_number = request.form.get('mobile_number')
+    current_user.primary_skill = request.form.get('primary_skill')
+    current_user.primary_skill_experience = request.form.get('primary_skill_experience')
+    current_user.secondary_skill = request.form.get('secondary_skill')
+    current_user.secondary_skill_experience = request.form.get('secondary_skill_experience')
+
+    if 'resume' in request.files:
+        file = request.files['resume']
+        if file.filename != '':
+            if file and file.filename.endswith('.pdf'):
+                filename = secure_filename(f"{current_user.id}_{file.filename}")
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                current_user.resume_filename = filename
+            else:
+                flash('Only PDF files are allowed for resumes.', 'danger')
+                return redirect(url_for('profile'))
+    db.session.commit()
+    flash('Your profile has been updated successfully!', 'success')
+    return redirect(url_for('profile'))
+
+# --- NEW: Route to handle updating the security question ---
+@app.route('/update_security_question', methods=['POST'])
+@login_required
+def update_security_question():
+    secret_question = request.form.get('secret_question')
+    secret_answer = request.form.get('secret_answer')
+    if secret_question and secret_answer:
+        current_user.secret_question = secret_question
+        current_user.secret_answer_hash = bcrypt.generate_password_hash(secret_answer).decode('utf-8')
+        db.session.commit()
+        flash('Your security question has been updated.', 'success')
+    else:
+        flash('Please select a question and provide an answer.', 'danger')
+    return redirect(url_for('profile'))
+
+@app.route('/view_profile/<int:user_id>')
+@login_required
+@role_required('admin')
+def view_profile(user_id):
+    user = User.query.get_or_404(user_id)
+    return render_template('view_user_profile.html', user=user)
+
+@app.route('/edit_profile/<int:user_id>')
+@login_required
+@role_required('admin')
+def edit_user_profile(user_id):
+    user = User.query.get_or_404(user_id)
+    return render_template('edit_user_profile.html', user=user)
+
+@app.route('/update_user_profile/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('admin')
+def update_user_profile(user_id):
+    user_to_update = User.query.get_or_404(user_id)
+    
+    user_to_update.mobile_number = request.form.get('mobile_number')
+    user_to_update.primary_skill = request.form.get('primary_skill')
+    user_to_update.primary_skill_experience = request.form.get('primary_skill_experience')
+    user_to_update.secondary_skill = request.form.get('secondary_skill')
+    user_to_update.secondary_skill_experience = request.form.get('secondary_skill_experience')
+
+    if 'resume' in request.files:
+        file = request.files['resume']
+        if file.filename != '':
+            if file and file.filename.endswith('.pdf'):
+                filename = secure_filename(f"{user_to_update.id}_{file.filename}")
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                user_to_update.resume_filename = filename
+            else:
+                flash('Only PDF files are allowed for resumes.', 'danger')
+                return redirect(url_for('edit_user_profile', user_id=user_id))
+    
+    db.session.commit()
+    flash(f'{user_to_update.username}\'s profile has been updated.', 'success')
+    return redirect(url_for('manage_users'))
+
+@app.route('/change_password', methods=['POST'])
+@login_required
+def change_password():
+    old_password = request.form.get('old_password')
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+
+    if not bcrypt.check_password_hash(current_user.password_hash, old_password):
+        flash('Old password is not correct.', 'danger')
+        return redirect(url_for('profile'))
+    
+    if new_password != confirm_password:
+        flash('New passwords do not match.', 'danger')
+        return redirect(url_for('profile'))
+
+    current_user.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
+    db.session.commit()
+    flash('Your password has been updated successfully!', 'success')
+    return redirect(url_for('profile'))
+
+@app.route('/admin/change_user_password/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('admin')
+def admin_change_user_password(user_id):
+    user_to_update = User.query.get_or_404(user_id)
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+
+    if new_password != confirm_password:
+        flash('New passwords do not match.', 'danger')
+        return redirect(url_for('edit_user_profile', user_id=user_id))
+    
+    user_to_update.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
+    db.session.commit()
+    flash(f'Password for {user_to_update.username} has been updated.', 'success')
     return redirect(url_for('manage_users'))
 
 
@@ -266,11 +401,12 @@ def send_message():
 @role_required('candidate')
 def share_code():
     recipient_id = request.form.get('recipient_id')
-    java_code = request.form.get('java_code')
-    if not recipient_id or not java_code.strip():
+    code = request.form.get('code')
+    language = "java" # Hardcode to java
+    if not recipient_id or not code.strip():
         flash('Please select a recipient and provide code.', 'danger')
     else:
-        new_snippet = CodeSnippet(sender_id=current_user.id, recipient_id=recipient_id, code=java_code)
+        new_snippet = CodeSnippet(sender_id=current_user.id, recipient_id=recipient_id, code=code, language=language)
         db.session.add(new_snippet)
         db.session.commit()
         flash('Code snippet shared successfully!', 'success')
@@ -328,6 +464,7 @@ def submit_code_test():
     recipient_id = request.form.get('recipient_id')
     code = request.form.get('code')
     output = request.form.get('output')
+    language = "java" # Hardcode to java
     if not recipient_id or not code.strip():
         flash('Please select a recipient and provide code.', 'danger')
     else:
@@ -335,7 +472,8 @@ def submit_code_test():
             candidate_id=current_user.id,
             recipient_id=recipient_id,
             code=code,
-            output=output
+            output=output,
+            language=language
         )
         db.session.add(submission)
         db.session.commit()
@@ -416,6 +554,42 @@ def add_contact_for_candidate():
     else:
         flash('Invalid selection. Please try again.', 'danger')
     return redirect(url_for('admin_dashboard'))
+
+# --- NEW: Routes for Forgot Password using Secret Question ---
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = User.query.filter_by(email=email).first()
+        if user and user.secret_question:
+            return redirect(url_for('reset_with_question', user_id=user.id))
+        else:
+            flash('No account found with that email or no secret question is set.', 'warning')
+            return redirect(url_for('forgot_password'))
+    return render_template('forgot_password.html')
+
+@app.route('/reset_with_question/<int:user_id>', methods=['GET', 'POST'])
+def reset_with_question(user_id):
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    user = User.query.get_or_404(user_id)
+    if request.method == 'POST':
+        answer = request.form.get('secret_answer')
+        new_password = request.form.get('new_password')
+        
+        if user.secret_answer_hash and bcrypt.check_password_hash(user.secret_answer_hash, answer):
+            user.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
+            db.session.commit()
+            flash('Your password has been updated! You can now log in.', 'success')
+            return redirect(url_for('login_register'))
+        else:
+            flash('Your secret answer was incorrect. Please try again.', 'danger')
+            return redirect(url_for('reset_with_question', user_id=user.id))
+            
+    return render_template('reset_with_question.html', user=user)
+
 
 @app.context_processor
 def inject_messages():

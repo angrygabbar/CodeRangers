@@ -83,7 +83,7 @@
         {% for snippet in received_snippets %}
             <div class="bg-white/5 dark:bg-gray-700/20 rounded-lg p-4 animate-stagger">
                 <p class="text-sm text-gray-400 mb-2">From: <strong class="text-white">{{ snippet.snippet_sender.username }}</strong> on {{ snippet.timestamp.strftime('%b %d, %Y') }}</p>
-                <pre><code class="language-java">{{ snippet.code }}</code></pre>
+                <pre><code class="language-{{ snippet.language }}">{{ snippet.code }}</code></pre>
             </div>
         {% else %}
             <p class="text-gray-400">No code snippets have been shared with you.</p>
@@ -98,8 +98,8 @@
         {% for test in received_tests %}
             <div class="bg-white/5 dark:bg-gray-700/20 rounded-lg p-4 animate-stagger">
                 <p class="text-sm text-gray-400 mb-2">From: <strong class="text-white">{{ test.candidate_submitter.username }}</strong> on {{ test.submitted_at.strftime('%b %d, %Y') }}</p>
-                <h3 class="font-semibold text-white mt-4">Submitted Code:</h3>
-                <pre><code class="language-java">{{ test.code }}</code></pre>
+                <h3 class="font-semibold text-white mt-4">Submitted Code ({{ test.language.title() }}):</h3>
+                <pre><code class="language-{{ test.language }}">{{ test.code }}</code></pre>
                 <h3 class="font-semibold text-white mt-4">Output:</h3>
                 <pre class="bg-gray-900 text-white p-2 rounded-md"><code class="language-bash">{{ test.output }}</code></pre>
             </div>

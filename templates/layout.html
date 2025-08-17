@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Three.js for 3D graphics -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- NEW: GSAP for advanced animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/ScrollTrigger.min.js"></script>
 </head>
 <body class="bg-black">
     <!-- Canvas for 3D background -->
@@ -24,30 +27,61 @@
                     <h1 class="ml-3 text-2xl font-bold text-white">Ocean Of Coders</h1>
                 </a>
                 <div class="hidden md:flex items-center space-x-1">
-                    <a href="{{ url_for('home') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Home</a>
-                    <a href="{{ url_for('contact') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Contact Us</a>
                     {% if current_user.is_authenticated %}
                         <a href="{{ url_for('dashboard') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Dashboard</a>
+                        <a href="{{ url_for('profile') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Profile</a>
                         <a href="{{ url_for('messages') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Messages</a>
                         {% if current_user.role == 'candidate' %}
                             <a href="{{ url_for('code_test') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Code Test</a>
                         {% endif %}
-                        <!-- NEW: Manage Users Link for Admins -->
                         {% if current_user.role == 'admin' %}
                             <a href="{{ url_for('manage_users') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Manage Users</a>
                         {% endif %}
+                    {% else %}
+                        <a href="{{ url_for('home') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Home</a>
+                        <a href="{{ url_for('contact') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Contact Us</a>
                     {% endif %}
                 </div>
-                <div class="flex items-center">
+                <div class="hidden md:flex items-center">
                     {% if current_user.is_authenticated %}
                         <a href="{{ url_for('logout') }}" class="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-transform duration-200 hover:scale-105">Logout</a>
                     {% else %}
                         <a href="{{ url_for('login_register') }}" class="bg-indigo-600 text-white px-5 py-2 rounded-md hover:bg-indigo-700 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/50 transform hover:scale-105">Login / Register</a>
                     {% endif %}
                 </div>
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700 focus:outline-none">
+                        <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Dashboard</a>
+                    <a href="{{ url_for('profile') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Profile</a>
+                    <a href="{{ url_for('messages') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Messages</a>
+                    {% if current_user.role == 'candidate' %}
+                        <a href="{{ url_for('code_test') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Code Test</a>
+                    {% endif %}
+                    {% if current_user.role == 'admin' %}
+                        <a href="{{ url_for('manage_users') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Manage Users</a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('home') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Home</a>
+                    <a href="{{ url_for('contact') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Contact Us</a>
+                    <a href="{{ url_for('login_register') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Login / Register</a>
+                {% endif %}
             </div>
         </div>
     </nav>
+    
     <main class="p-4 sm:p-6 lg:p-8 relative z-10">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -60,14 +94,24 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+        
         <div class="max-w-7xl mx-auto">
             {% block content %}{% endblock %}
         </div>
     </main>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- Mobile Menu Toggle ---
+            const menuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            menuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
             // --- 3D Starfield Background ---
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
@@ -159,19 +203,20 @@
             });
 
             // --- Dynamic Entrance Animations ---
-            const animations = ['animate__fadeInUp', 'animate__fadeInDown', 'animate__fadeInLeft', 'animate__fadeInRight', 'animate__zoomIn'];
+            gsap.registerPlugin(ScrollTrigger);
             const elementsToAnimate = document.querySelectorAll('.animate-dynamic');
             elementsToAnimate.forEach(el => {
-                const randomAnimation = animations[Math.floor(Math.random() * animations.length)];
-                if (!el.style.animationDelay) {
-                    el.style.animationDelay = `${Math.random() * 0.3}s`;
-                }
-                el.classList.add('animate__animated', randomAnimation);
-            });
-            const listItems = document.querySelectorAll('.animate-stagger');
-            listItems.forEach((item, index) => {
-                item.style.animationDelay = `${index * 120}ms`;
-                item.classList.add('animate__animated', 'animate__fadeInUp');
+                gsap.from(el, {
+                    scrollTrigger: {
+                        trigger: el,
+                        start: "top 80%",
+                        toggleActions: "play none none none"
+                    },
+                    opacity: 0,
+                    y: 50,
+                    duration: 0.8,
+                    ease: "power3.out"
+                });
             });
 
             // --- Inactivity Logout Logic ---

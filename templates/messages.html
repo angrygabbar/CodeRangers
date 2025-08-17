@@ -1,9 +1,9 @@
 {% extends "layout.html" %}
 {% block title %}Messages{% endblock %}
 {% block content %}
-<div class="h-[calc(100vh-12rem)] bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl backdrop-blur-sm border border-white/10 flex animate-dynamic">
+<div class="h-[calc(100vh-12rem)] bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl backdrop-blur-sm border border-white/10 flex animate-dynamic overflow-hidden">
     <!-- Left Panel: User List -->
-    <div class="w-1/3 border-r border-white/10">
+    <div id="contact-list" class="w-full md:w-1/3 border-r border-white/10">
         <div class="p-4 border-b border-white/10">
             <h1 class="text-xl font-bold text-white">Contacts</h1>
         </div>
@@ -21,15 +21,18 @@
     </div>
 
     <!-- Right Panel: Chat Window -->
-    <div class="w-2/3 flex flex-col">
+    <div id="chat-window" class="w-full md:w-2/3 flex-col hidden md:flex">
         <!-- Chat Header -->
         <div id="chat-header" class="p-4 border-b border-white/10 flex items-center">
+            <!-- Back button for mobile -->
+            <button id="back-to-contacts" class="md:hidden mr-4 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+            </button>
             <h2 id="chat-with-username" class="text-xl font-bold text-white">Select a contact to start chatting</h2>
         </div>
 
         <!-- Message Area -->
         <div id="message-area" class="flex-1 p-6 overflow-y-auto space-y-4">
-            <!-- Messages will be dynamically inserted here -->
             <p id="no-chat-selected" class="text-gray-400 text-center mt-10">Your conversation will appear here.</p>
         </div>
 
@@ -46,7 +49,11 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    const contactList = document.getElementById('contact-list');
+    const chatWindow = document.getElementById('chat-window');
     const userContacts = document.querySelectorAll('.user-contact');
+    const backButton = document.getElementById('back-to-contacts');
+    
     const chatHeader = document.getElementById('chat-header');
     const chatUsername = document.getElementById('chat-with-username');
     const messageArea = document.getElementById('message-area');
@@ -57,12 +64,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageBodyInput = document.getElementById('message-body-input');
     const currentUserId = {{ current_user.id }};
 
+    function showChatWindow() {
+        contactList.classList.add('hidden');
+        contactList.classList.remove('md:block');
+        chatWindow.classList.remove('hidden');
+        chatWindow.classList.add('flex');
+    }
+
+    function showContactList() {
+        contactList.classList.remove('hidden');
+        contactList.classList.add('md:block');
+        chatWindow.classList.add('hidden');
+        chatWindow.classList.remove('flex');
+    }
+
     userContacts.forEach(contact => {
         contact.addEventListener('click', async () => {
             const userId = contact.dataset.userId;
             const username = contact.dataset.username;
 
-            // Update UI
+            if (window.innerWidth < 768) { // md breakpoint in Tailwind
+                showChatWindow();
+            }
+
             chatUsername.textContent = `Chat with ${username}`;
             noChatSelected.classList.add('hidden');
             messageFormContainer.classList.remove('hidden');
@@ -70,12 +94,11 @@ document.addEventListener('DOMContentLoaded', () => {
             messageBodyInput.focus();
             messageArea.innerHTML = '<p class="text-gray-400">Loading conversation...</p>';
 
-            // Fetch conversation
             try {
                 const response = await fetch(`/get_conversation/${userId}`);
                 const conversation = await response.json();
                 
-                messageArea.innerHTML = ''; // Clear loading message
+                messageArea.innerHTML = '';
                 if (conversation.length === 0) {
                     messageArea.innerHTML = '<p class="text-gray-400 text-center">No messages yet. Start the conversation!</p>';
                 } else {
@@ -93,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         messageArea.appendChild(messageElement);
                     });
                 }
-                messageArea.scrollTop = messageArea.scrollHeight; // Scroll to bottom
+                messageArea.scrollTop = messageArea.scrollHeight;
             } catch (error) {
                 messageArea.innerHTML = '<p class="text-red-400">Error loading conversation.</p>';
                 console.error('Fetch error:', error);
@@ -101,7 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Handle sending new messages
+    backButton.addEventListener('click', () => {
+        showContactList();
+    });
+
     messageForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const recipientId = recipientIdInput.value;
@@ -109,7 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!recipientId || !body.trim()) return;
 
-        // Add message to UI immediately for a responsive feel
         const messageElement = document.createElement('div');
         messageElement.className = 'flex justify-end';
         messageElement.innerHTML = `
@@ -122,9 +147,8 @@ document.addEventListener('DOMContentLoaded', () => {
         messageArea.scrollTop = messageArea.scrollHeight;
         
         const originalInput = messageBodyInput.value;
-        messageBodyInput.value = ''; // Clear input
+        messageBodyInput.value = '';
 
-        // Send to server
         try {
             const formData = new FormData();
             formData.append('recipient_id', recipientId);
@@ -135,13 +159,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: formData,
             });
 
-            // Reload the conversation to get the final message with timestamp
             document.querySelector(`[data-user-id='${recipientId}']`).click();
 
         } catch (error) {
             console.error('Send message error:', error);
             messageElement.querySelector('p:last-child').textContent = 'Failed to send';
-            messageBodyInput.value = originalInput; // Restore input on failure
+            messageBodyInput.value = originalInput;
         }
     });
 });
