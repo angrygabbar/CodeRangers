@@ -189,7 +189,6 @@ def update_profile():
     current_user.primary_skill_experience = request.form.get('primary_skill_experience')
     current_user.secondary_skill = request.form.get('secondary_skill')
     current_user.secondary_skill_experience = request.form.get('secondary_skill_experience')
-
     if 'resume' in request.files:
         file = request.files['resume']
         if file.filename != '':
@@ -204,7 +203,6 @@ def update_profile():
     flash('Your profile has been updated successfully!', 'success')
     return redirect(url_for('profile'))
 
-# --- NEW: Route to handle updating the security question ---
 @app.route('/update_security_question', methods=['POST'])
 @login_required
 def update_security_question():
@@ -306,16 +304,10 @@ def admin_dashboard():
     received_snippets = CodeSnippet.query.filter_by(recipient_id=current_user.id).order_by(CodeSnippet.timestamp.desc()).all()
     applications = JobApplication.query.order_by(JobApplication.applied_at.desc()).all()
     activities = ActivityUpdate.query.order_by(ActivityUpdate.timestamp.desc()).all()
-    received_tests = CodeTestSubmission.query.filter_by(recipient_id=current_user.id).order_by(CodeTestSubmission.submitted_at.desc()).all()
-    candidates = User.query.filter_by(role='candidate').all()
-    problems = ProblemStatement.query.all()
-    developers = User.query.filter_by(role='developer').all()
     return render_template('admin_dashboard.html', 
                            pending_users=pending_users, 
                            received_snippets=received_snippets,
-                           applications=applications, activities=activities,
-                           received_tests=received_tests, candidates=candidates, problems=problems,
-                           developers=developers)
+                           applications=applications, activities=activities)
 
 @app.route('/developer', methods=['GET', 'POST'])
 @login_required
@@ -331,13 +323,9 @@ def developer_dashboard():
         return redirect(url_for('developer_dashboard'))
     activities = ActivityUpdate.query.order_by(ActivityUpdate.timestamp.desc()).all()
     received_snippets = CodeSnippet.query.filter_by(recipient_id=current_user.id).order_by(CodeSnippet.timestamp.desc()).all()
-    received_tests = CodeTestSubmission.query.filter_by(recipient_id=current_user.id).order_by(CodeTestSubmission.submitted_at.desc()).all()
-    candidates = User.query.filter_by(role='candidate').all()
-    problems = ProblemStatement.query.all()
     return render_template('developer_dashboard.html', 
                            activities=activities,
-                           received_snippets=received_snippets, received_tests=received_tests,
-                           candidates=candidates, problems=problems)
+                           received_snippets=received_snippets)
 
 @app.route('/candidate')
 @login_required
@@ -402,7 +390,7 @@ def send_message():
 def share_code():
     recipient_id = request.form.get('recipient_id')
     code = request.form.get('code')
-    language = "java" # Hardcode to java
+    language = "java"
     if not recipient_id or not code.strip():
         flash('Please select a recipient and provide code.', 'danger')
     else:
@@ -464,7 +452,7 @@ def submit_code_test():
     recipient_id = request.form.get('recipient_id')
     code = request.form.get('code')
     output = request.form.get('output')
-    language = "java" # Hardcode to java
+    language = "java"
     if not recipient_id or not code.strip():
         flash('Please select a recipient and provide code.', 'danger')
     else:
@@ -511,7 +499,7 @@ def create_problem():
         db.session.add(new_problem)
         db.session.commit()
         flash('New problem statement created.', 'success')
-    return redirect(request.referrer)
+    return redirect(url_for('events'))
 @app.route('/assign_problem', methods=['POST'])
 @login_required
 @role_required(['admin', 'developer'])
@@ -523,13 +511,13 @@ def assign_problem():
     candidate = User.query.get(candidate_id)
     if not candidate or not problem_id or not start_time_str or not end_time_str:
         flash('Please select a candidate, a problem, and set both start and end times.', 'danger')
-        return redirect(request.referrer)
+        return redirect(url_for('events'))
     try:
         start_time_ist = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M')
         end_time_ist = datetime.strptime(end_time_str, '%Y-%m-%dT%H:%M')
     except ValueError:
         flash('Invalid date/time format.', 'danger')
-        return redirect(request.referrer)
+        return redirect(url_for('events'))
     ist_offset = timedelta(hours=5, minutes=30)
     start_time_utc = start_time_ist - ist_offset
     end_time_utc = end_time_ist - ist_offset
@@ -538,7 +526,7 @@ def assign_problem():
     candidate.test_end_time = end_time_utc
     db.session.commit()
     flash(f'Problem assigned to {candidate.username}.', 'success')
-    return redirect(request.referrer)
+    return redirect(url_for('events'))
 @app.route('/add_contact_for_candidate', methods=['POST'])
 @login_required
 @role_required('admin')
@@ -554,8 +542,6 @@ def add_contact_for_candidate():
     else:
         flash('Invalid selection. Please try again.', 'danger')
     return redirect(url_for('admin_dashboard'))
-
-# --- NEW: Routes for Forgot Password using Secret Question ---
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
     if current_user.is_authenticated:
@@ -569,7 +555,6 @@ def forgot_password():
             flash('No account found with that email or no secret question is set.', 'warning')
             return redirect(url_for('forgot_password'))
     return render_template('forgot_password.html')
-
 @app.route('/reset_with_question/<int:user_id>', methods=['GET', 'POST'])
 def reset_with_question(user_id):
     if current_user.is_authenticated:
@@ -578,7 +563,6 @@ def reset_with_question(user_id):
     if request.method == 'POST':
         answer = request.form.get('secret_answer')
         new_password = request.form.get('new_password')
-        
         if user.secret_answer_hash and bcrypt.check_password_hash(user.secret_answer_hash, answer):
             user.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
             db.session.commit()
@@ -587,8 +571,67 @@ def reset_with_question(user_id):
         else:
             flash('Your secret answer was incorrect. Please try again.', 'danger')
             return redirect(url_for('reset_with_question', user_id=user.id))
-            
     return render_template('reset_with_question.html', user=user)
+
+# --- NEW: Events Page Route ---
+@app.route('/events')
+@login_required
+@role_required(['admin', 'developer'])
+def events():
+    candidates = User.query.filter_by(role='candidate').all()
+    problems = ProblemStatement.query.all()
+    scheduled_events = User.query.filter(User.problem_statement_id != None).all()
+    
+    ist_offset = timedelta(hours=5, minutes=30)
+    for event in scheduled_events:
+        if event.test_start_time:
+            event.start_time_ist = (event.test_start_time + ist_offset).strftime('%b %d, %Y at %I:%M %p')
+        if event.test_end_time:
+            event.end_time_ist = (event.test_end_time + ist_offset).strftime('%b %d, %Y at %I:%M %p')
+
+    # Fetch received code tests for the current user (admin or developer)
+    received_tests = CodeTestSubmission.query.filter_by(recipient_id=current_user.id).order_by(CodeTestSubmission.submitted_at.desc()).all()
+
+    return render_template('events.html', candidates=candidates, problems=problems, scheduled_events=scheduled_events, received_tests=received_tests)
+
+# --- NEW: Routes for Rescheduling and Canceling Events ---
+@app.route('/reschedule_event/<int:user_id>', methods=['POST'])
+@login_required
+@role_required(['admin', 'developer'])
+def reschedule_event(user_id):
+    candidate = User.query.get_or_404(user_id)
+    start_time_str = request.form.get('new_start_time')
+    end_time_str = request.form.get('new_end_time')
+
+    if not start_time_str or not end_time_str:
+        flash('Please provide both a new start and end time.', 'danger')
+        return redirect(url_for('events'))
+    
+    try:
+        start_time_ist = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M')
+        end_time_ist = datetime.strptime(end_time_str, '%Y-%m-%dT%H:%M')
+    except ValueError:
+        flash('Invalid date/time format.', 'danger')
+        return redirect(url_for('events'))
+
+    ist_offset = timedelta(hours=5, minutes=30)
+    candidate.test_start_time = start_time_ist - ist_offset
+    candidate.test_end_time = end_time_ist - ist_offset
+    db.session.commit()
+    flash(f'Event for {candidate.username} has been rescheduled.', 'success')
+    return redirect(url_for('events'))
+
+@app.route('/cancel_event/<int:user_id>')
+@login_required
+@role_required(['admin', 'developer'])
+def cancel_event(user_id):
+    candidate = User.query.get_or_404(user_id)
+    candidate.problem_statement_id = None
+    candidate.test_start_time = None
+    candidate.test_end_time = None
+    db.session.commit()
+    flash(f'Event for {candidate.username} has been canceled.', 'success')
+    return redirect(url_for('events'))
 
 
 @app.context_processor

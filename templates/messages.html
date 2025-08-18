@@ -23,12 +23,17 @@
     <!-- Right Panel: Chat Window -->
     <div id="chat-window" class="w-full md:w-2/3 flex-col hidden md:flex">
         <!-- Chat Header -->
-        <div id="chat-header" class="p-4 border-b border-white/10 flex items-center">
-            <!-- Back button for mobile -->
-            <button id="back-to-contacts" class="md:hidden mr-4 text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+        <div id="chat-header" class="p-4 border-b border-white/10 flex items-center justify-between">
+            <div class="flex items-center">
+                <button id="back-to-contacts" class="md:hidden mr-4 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <h2 id="chat-with-username" class="text-xl font-bold text-white">Select a contact to start chatting</h2>
+            </div>
+            <!-- NEW: Refresh Button -->
+            <button id="refresh-chat-button" class="hidden px-3 py-1 rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                <i class="fas fa-sync-alt"></i>
             </button>
-            <h2 id="chat-with-username" class="text-xl font-bold text-white">Select a contact to start chatting</h2>
         </div>
 
         <!-- Message Area -->
@@ -53,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatWindow = document.getElementById('chat-window');
     const userContacts = document.querySelectorAll('.user-contact');
     const backButton = document.getElementById('back-to-contacts');
+    const refreshButton = document.getElementById('refresh-chat-button');
     
     const chatHeader = document.getElementById('chat-header');
     const chatUsername = document.getElementById('chat-with-username');
@@ -63,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const recipientIdInput = document.getElementById('recipient-id-input');
     const messageBodyInput = document.getElementById('message-body-input');
     const currentUserId = {{ current_user.id }};
+    let activeChatUserId = null;
 
     function showChatWindow() {
         contactList.classList.add('hidden');
@@ -78,54 +85,70 @@ document.addEventListener('DOMContentLoaded', () => {
         chatWindow.classList.remove('flex');
     }
 
+    // NEW: Function to fetch and display the conversation
+    async function fetchAndDisplayConversation(userId) {
+        messageArea.innerHTML = '<p class="text-gray-400">Loading conversation...</p>';
+        try {
+            const response = await fetch(`/get_conversation/${userId}`);
+            const conversation = await response.json();
+            
+            messageArea.innerHTML = '';
+            if (conversation.length === 0) {
+                messageArea.innerHTML = '<p class="text-gray-400 text-center">No messages yet. Start the conversation!</p>';
+            } else {
+                conversation.forEach(msg => {
+                    const messageElement = document.createElement('div');
+                    const isSender = msg.sender_id === currentUserId;
+                    
+                    messageElement.className = `flex ${isSender ? 'justify-end' : 'justify-start'}`;
+                    messageElement.innerHTML = `
+                        <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isSender ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}">
+                            <p>${msg.body}</p>
+                            <p class="text-xs text-right mt-1 ${isSender ? 'text-indigo-200' : 'text-gray-400'}">${msg.timestamp}</p>
+                        </div>
+                    `;
+                    messageArea.appendChild(messageElement);
+                });
+            }
+            messageArea.scrollTop = messageArea.scrollHeight;
+        } catch (error) {
+            messageArea.innerHTML = '<p class="text-red-400">Error loading conversation.</p>';
+            console.error('Fetch error:', error);
+        }
+    }
+
     userContacts.forEach(contact => {
-        contact.addEventListener('click', async () => {
+        contact.addEventListener('click', () => {
             const userId = contact.dataset.userId;
             const username = contact.dataset.username;
+            activeChatUserId = userId;
 
-            if (window.innerWidth < 768) { // md breakpoint in Tailwind
+            if (window.innerWidth < 768) {
                 showChatWindow();
             }
 
             chatUsername.textContent = `Chat with ${username}`;
             noChatSelected.classList.add('hidden');
             messageFormContainer.classList.remove('hidden');
+            refreshButton.classList.remove('hidden'); // Show refresh button
             recipientIdInput.value = userId;
             messageBodyInput.focus();
-            messageArea.innerHTML = '<p class="text-gray-400">Loading conversation...</p>';
-
-            try {
-                const response = await fetch(`/get_conversation/${userId}`);
-                const conversation = await response.json();
-                
-                messageArea.innerHTML = '';
-                if (conversation.length === 0) {
-                    messageArea.innerHTML = '<p class="text-gray-400 text-center">No messages yet. Start the conversation!</p>';
-                } else {
-                    conversation.forEach(msg => {
-                        const messageElement = document.createElement('div');
-                        const isSender = msg.sender_id === currentUserId;
-                        
-                        messageElement.className = `flex ${isSender ? 'justify-end' : 'justify-start'}`;
-                        messageElement.innerHTML = `
-                            <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isSender ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}">
-                                <p>${msg.body}</p>
-                                <p class="text-xs text-right mt-1 ${isSender ? 'text-indigo-200' : 'text-gray-400'}">${msg.timestamp}</p>
-                            </div>
-                        `;
-                        messageArea.appendChild(messageElement);
-                    });
-                }
-                messageArea.scrollTop = messageArea.scrollHeight;
-            } catch (error) {
-                messageArea.innerHTML = '<p class="text-red-400">Error loading conversation.</p>';
-                console.error('Fetch error:', error);
-            }
+            
+            fetchAndDisplayConversation(userId);
         });
     });
 
     backButton.addEventListener('click', () => {
         showContactList();
+        activeChatUserId = null;
+        refreshButton.classList.add('hidden'); // Hide refresh button
+    });
+
+    // NEW: Event listener for the refresh button
+    refreshButton.addEventListener('click', () => {
+        if (activeChatUserId) {
+            fetchAndDisplayConversation(activeChatUserId);
+        }
     });
 
     messageForm.addEventListener('submit', async (e) => {
@@ -159,7 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: formData,
             });
 
-            document.querySelector(`[data-user-id='${recipientId}']`).click();
+            // Reload the conversation after sending
+            fetchAndDisplayConversation(recipientId);
 
         } catch (error) {
             console.error('Send message error:', error);

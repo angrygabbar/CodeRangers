@@ -21,7 +21,7 @@
 
 body {
     font-family: sans-serif;
-    overflow-x: hidden;
+    overflow-x: hidden; /* Prevent horizontal scrollbar from 3D background */
 }
 
 /* Interactive Card Tilt Effect */
@@ -31,4 +31,21 @@ body {
 }
 .interactive-card:hover {
     transform: perspective(1000px) rotateY(var(--rotateY)) rotateX(var(--rotateX)) scale3d(1.05, 1.05, 1.05);
+}
+
+/* Styles for Drag Handle */
+.drag-handle {
+    cursor: grab;
+    padding: 0.5rem;
+    display: inline-block;
+    color: #a5b4fc; /* A subtle purple to match the theme */
+}
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Style for the sortable item being dragged */
+.sortable-ghost {
+    opacity: 0.4;
+    background: #4f46e5;
 }
