@@ -115,6 +115,7 @@ def logout():
 def dashboard():
     if current_user.role == 'admin': return redirect(url_for('admin_dashboard'))
     elif current_user.role == 'developer': return redirect(url_for('developer_dashboard'))
+    elif current_user.role == 'moderator': return redirect(url_for('moderator_dashboard'))
     else: return redirect(url_for('candidate_dashboard'))
 
 @app.route('/messages')
@@ -129,8 +130,33 @@ def messages():
             creator = current_user.assigned_problem.creator
             if creator:
                 messageable_users_dict[creator.id] = creator
+        
+        # Add moderators only if the coding event is currently active
+        now = datetime.utcnow()
+        if current_user.test_start_time and current_user.test_end_time:
+            if current_user.test_start_time <= now <= current_user.test_end_time:
+                moderators = User.query.filter_by(role='moderator').all()
+                for moderator in moderators:
+                    messageable_users_dict[moderator.id] = moderator
+
         for contact in current_user.allowed_contacts:
             messageable_users_dict[contact.id] = contact
+        messageable_users = list(messageable_users_dict.values())
+    elif current_user.role == 'moderator':
+        messageable_users_dict = {}
+        admins = User.query.filter_by(role='admin').all()
+        for admin in admins:
+            messageable_users_dict[admin.id] = admin
+        
+        now = datetime.utcnow()
+        active_candidates = User.query.filter(
+            User.role == 'candidate',
+            User.test_start_time <= now,
+            User.test_end_time >= now
+        ).all()
+        for candidate in active_candidates:
+            messageable_users_dict[candidate.id] = candidate
+            
         messageable_users = list(messageable_users_dict.values())
     else:
         messageable_users = User.query.filter(User.id != current_user.id).all()
@@ -327,6 +353,21 @@ def developer_dashboard():
                            activities=activities,
                            received_snippets=received_snippets)
 
+@app.route('/moderator')
+@login_required
+@role_required('moderator')
+def moderator_dashboard():
+    scheduled_events = User.query.filter(User.problem_statement_id != None).all()
+    
+    ist_offset = timedelta(hours=5, minutes=30)
+    for event in scheduled_events:
+        if event.test_start_time:
+            event.start_time_ist = (event.test_start_time + ist_offset).strftime('%b %d, %Y at %I:%M %p')
+        if event.test_end_time:
+            event.end_time_ist = (event.test_end_time + ist_offset).strftime('%b %d, %Y at %I:%M %p')
+
+    return render_template('moderator_dashboard.html', scheduled_events=scheduled_events)
+
 @app.route('/candidate')
 @login_required
 @role_required('candidate')
@@ -488,7 +529,7 @@ def run_code():
         return jsonify({'error': str(e)}), 500
 @app.route('/create_problem', methods=['POST'])
 @login_required
-@role_required(['admin', 'developer'])
+@role_required(['admin', 'developer', 'moderator'])
 def create_problem():
     title = request.form.get('problem_title')
     description = request.form.get('problem_description')
@@ -502,7 +543,7 @@ def create_problem():
     return redirect(url_for('events'))
 @app.route('/assign_problem', methods=['POST'])
 @login_required
-@role_required(['admin', 'developer'])
+@role_required(['admin', 'developer', 'moderator'])
 def assign_problem():
     candidate_id = request.form.get('candidate_id')
     problem_id = request.form.get('problem_id')
@@ -573,10 +614,9 @@ def reset_with_question(user_id):
             return redirect(url_for('reset_with_question', user_id=user.id))
     return render_template('reset_with_question.html', user=user)
 
-# --- NEW: Events Page Route ---
 @app.route('/events')
 @login_required
-@role_required(['admin', 'developer'])
+@role_required(['admin', 'developer', 'moderator'])
 def events():
     candidates = User.query.filter_by(role='candidate').all()
     problems = ProblemStatement.query.all()
@@ -589,15 +629,13 @@ def events():
         if event.test_end_time:
             event.end_time_ist = (event.test_end_time + ist_offset).strftime('%b %d, %Y at %I:%M %p')
 
-    # Fetch received code tests for the current user (admin or developer)
-    received_tests = CodeTestSubmission.query.filter_by(recipient_id=current_user.id).order_by(CodeTestSubmission.submitted_at.desc()).all()
+    received_tests = CodeTestSubmission.query.order_by(CodeTestSubmission.submitted_at.desc()).all()
 
     return render_template('events.html', candidates=candidates, problems=problems, scheduled_events=scheduled_events, received_tests=received_tests)
 
-# --- NEW: Routes for Rescheduling and Canceling Events ---
 @app.route('/reschedule_event/<int:user_id>', methods=['POST'])
 @login_required
-@role_required(['admin', 'developer'])
+@role_required(['admin', 'developer', 'moderator'])
 def reschedule_event(user_id):
     candidate = User.query.get_or_404(user_id)
     start_time_str = request.form.get('new_start_time')
@@ -605,25 +643,29 @@ def reschedule_event(user_id):
 
     if not start_time_str or not end_time_str:
         flash('Please provide both a new start and end time.', 'danger')
-        return redirect(url_for('events'))
+        return redirect(request.referrer)
     
     try:
         start_time_ist = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M')
         end_time_ist = datetime.strptime(end_time_str, '%Y-%m-%dT%H:%M')
     except ValueError:
         flash('Invalid date/time format.', 'danger')
-        return redirect(url_for('events'))
+        return redirect(request.referrer)
 
     ist_offset = timedelta(hours=5, minutes=30)
     candidate.test_start_time = start_time_ist - ist_offset
     candidate.test_end_time = end_time_ist - ist_offset
     db.session.commit()
     flash(f'Event for {candidate.username} has been rescheduled.', 'success')
-    return redirect(url_for('events'))
+    
+    if current_user.role == 'moderator':
+        return redirect(url_for('moderator_dashboard'))
+    else:
+        return redirect(url_for('events'))
 
 @app.route('/cancel_event/<int:user_id>')
 @login_required
-@role_required(['admin', 'developer'])
+@role_required(['admin', 'developer', 'moderator'])
 def cancel_event(user_id):
     candidate = User.query.get_or_404(user_id)
     candidate.problem_statement_id = None
@@ -631,7 +673,11 @@ def cancel_event(user_id):
     candidate.test_end_time = None
     db.session.commit()
     flash(f'Event for {candidate.username} has been canceled.', 'success')
-    return redirect(url_for('events'))
+    
+    if current_user.role == 'moderator':
+        return redirect(url_for('moderator_dashboard'))
+    else:
+        return redirect(url_for('events'))
 
 
 @app.context_processor

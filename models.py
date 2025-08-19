@@ -2,16 +2,15 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
 import uuid
-# Removed the itsdangerous Serializer as it's no longer needed
 
 db = SQLAlchemy()
 
-# (Other models like ProblemStatement, candidate_contacts table, etc. remain the same)
-# ...
+# Association table for the many-to-many relationship
 candidate_contacts = db.Table('candidate_contacts',
     db.Column('candidate_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('developer_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
 )
+
 class ProblemStatement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
@@ -19,12 +18,12 @@ class ProblemStatement(db.Model):
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     users = db.relationship('User', foreign_keys='User.problem_statement_id', backref='assigned_problem', lazy=True)
 
-
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+    # Role can now be 'admin', 'developer', 'moderator', or 'candidate'
     role = db.Column(db.String(20), nullable=False, default='candidate')
     is_approved = db.Column(db.Boolean, default=False, nullable=False)
     avatar_url = db.Column(db.String(200), nullable=False, default='https://api.dicebear.com/8.x/initials/svg?seed=User')
@@ -41,7 +40,6 @@ class User(UserMixin, db.Model):
     secondary_skill_experience = db.Column(db.String(50), nullable=True)
     resume_filename = db.Column(db.String(200), nullable=True)
 
-    # NEW: Columns for secret question and answer
     secret_question = db.Column(db.String(255), nullable=True)
     secret_answer_hash = db.Column(db.String(128), nullable=True)
 
