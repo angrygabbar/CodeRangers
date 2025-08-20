@@ -14,8 +14,6 @@
     <!-- GSAP for advanced animations -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/ScrollTrigger.min.js"></script>
-    <!-- SortableJS for drag-and-drop -->
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 </head>
 <body class="bg-black">
     <!-- Canvas for 3D background -->
@@ -28,6 +26,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-indigo-400"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
                     <h1 class="ml-3 text-2xl font-bold text-white">Ocean Of Coders</h1>
                 </a>
+                <!-- Desktop Menu -->
                 <div class="hidden md:flex items-center space-x-1">
                     {% if current_user.is_authenticated %}
                         <a href="{{ url_for('dashboard') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Dashboard</a>
@@ -36,7 +35,7 @@
                         {% if current_user.role == 'candidate' %}
                             <a href="{{ url_for('code_test') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Code Test</a>
                         {% endif %}
-                        {% if current_user.role in ['admin', 'developer'] %}
+                        {% if current_user.role in ['admin', 'developer', 'moderator'] %}
                             <a href="{{ url_for('events') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Events</a>
                         {% endif %}
                         {% if current_user.role == 'admin' %}
@@ -47,13 +46,45 @@
                         <a href="{{ url_for('contact') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Contact Us</a>
                     {% endif %}
                 </div>
-                <div class="flex items-center">
+                <div class="hidden md:flex items-center">
                     {% if current_user.is_authenticated %}
                         <a href="{{ url_for('logout') }}" class="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-transform duration-200 hover:scale-105">Logout</a>
                     {% else %}
                         <a href="{{ url_for('login_register') }}" class="bg-indigo-600 text-white px-5 py-2 rounded-md hover:bg-indigo-700 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/50 transform hover:scale-105">Login / Register</a>
                     {% endif %}
                 </div>
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700 focus:outline-none">
+                        <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Dashboard</a>
+                    <a href="{{ url_for('profile') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Profile</a>
+                    <a href="{{ url_for('messages') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Messages</a>
+                    {% if current_user.role == 'candidate' %}
+                        <a href="{{ url_for('code_test') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Code Test</a>
+                    {% endif %}
+                    {% if current_user.role in ['admin', 'developer', 'moderator'] %}
+                        <a href="{{ url_for('events') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Events</a>
+                    {% endif %}
+                    {% if current_user.role == 'admin' %}
+                        <a href="{{ url_for('manage_users') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Manage Users</a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('home') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Home</a>
+                    <a href="{{ url_for('contact') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Contact Us</a>
+                    <a href="{{ url_for('login_register') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Login / Register</a>
+                {% endif %}
             </div>
         </div>
     </nav>
@@ -81,6 +112,13 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- Mobile Menu Toggle ---
+            const menuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            menuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
             // --- 3D Starfield Background ---
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
@@ -215,31 +253,6 @@
             document.onkeypress = resetTimer;
             document.onclick = resetTimer;
             {% endif %}
-
-            // --- SortableJS Logic ---
-            const sortableContainer = document.getElementById('sortable-container');
-            if (sortableContainer) {
-                const pageId = window.location.pathname;
-                const sortable = new Sortable(sortableContainer, {
-                    animation: 150,
-                    handle: '.drag-handle',
-                    onEnd: function (evt) {
-                        const itemOrder = Array.from(sortable.el.children).map(item => item.id);
-                        localStorage.setItem(`sortOrder-${pageId}`, JSON.stringify(itemOrder));
-                    },
-                });
-
-                const savedOrder = localStorage.getItem(`sortOrder-${pageId}`);
-                if (savedOrder) {
-                    const order = JSON.parse(savedOrder);
-                    order.forEach(itemId => {
-                        const item = document.getElementById(itemId);
-                        if (item) {
-                            sortableContainer.appendChild(item);
-                        }
-                    });
-                }
-            }
         });
     </script>
 </body>
