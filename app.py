@@ -131,7 +131,6 @@ def messages():
             if creator:
                 messageable_users_dict[creator.id] = creator
         
-        # Add moderators only if the coding event is currently active
         now = datetime.utcnow()
         if current_user.test_start_time and current_user.test_end_time:
             if current_user.test_start_time <= now <= current_user.test_end_time:
@@ -142,6 +141,7 @@ def messages():
         for contact in current_user.allowed_contacts:
             messageable_users_dict[contact.id] = contact
         messageable_users = list(messageable_users_dict.values())
+
     elif current_user.role == 'moderator':
         messageable_users_dict = {}
         admins = User.query.filter_by(role='admin').all()
@@ -160,6 +160,7 @@ def messages():
         messageable_users = list(messageable_users_dict.values())
     else:
         messageable_users = User.query.filter(User.id != current_user.id).all()
+        
     return render_template('messages.html', messageable_users=messageable_users)
 
 @app.route('/get_conversation/<int:other_user_id>')
@@ -330,10 +331,14 @@ def admin_dashboard():
     received_snippets = CodeSnippet.query.filter_by(recipient_id=current_user.id).order_by(CodeSnippet.timestamp.desc()).all()
     applications = JobApplication.query.order_by(JobApplication.applied_at.desc()).all()
     activities = ActivityUpdate.query.order_by(ActivityUpdate.timestamp.desc()).all()
+    # RESTORED: Fetch candidates and developers for the contact form
+    candidates = User.query.filter_by(role='candidate').all()
+    developers = User.query.filter_by(role='developer').all()
     return render_template('admin_dashboard.html', 
                            pending_users=pending_users, 
                            received_snippets=received_snippets,
-                           applications=applications, activities=activities)
+                           applications=applications, activities=activities,
+                           candidates=candidates, developers=developers)
 
 @app.route('/developer', methods=['GET', 'POST'])
 @login_required
