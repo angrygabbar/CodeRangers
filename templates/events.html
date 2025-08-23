@@ -5,6 +5,7 @@
     <h1 class="text-3xl font-bold text-white animate-dynamic">Manage Coding Events</h1>
 
     <!-- Create & Assign Section -->
+    {% if current_user.role != 'moderator' %}
     <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
         <h2 class="text-2xl font-bold text-white mb-4">Schedule a New Event</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -46,6 +47,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Scheduled Events List -->
     <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
@@ -79,6 +81,7 @@
     </div>
 
     <!-- Received Code Tests Section -->
+    {% if current_user.role != 'moderator' %}
     <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 backdrop-blur-sm border border-white/10">
         <h2 class="text-2xl font-bold text-white mb-4">Received Code Test Submissions</h2>
         <div class="space-y-6">
@@ -95,5 +98,6 @@
             {% endfor %}
         </div>
     </div>
+    {% endif %}
 </div>
 {% endblock %}

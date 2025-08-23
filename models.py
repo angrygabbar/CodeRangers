@@ -1,3 +1,5 @@
+# DecConnectHub/models.py
+
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
@@ -33,6 +35,7 @@ class User(UserMixin, db.Model):
     test_end_time = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
+    moderator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     mobile_number = db.Column(db.String(20), nullable=True)
     primary_skill = db.Column(db.String(100), nullable=True)
     primary_skill_experience = db.Column(db.String(50), nullable=True)

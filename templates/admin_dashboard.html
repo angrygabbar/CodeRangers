@@ -4,9 +4,7 @@
 <h1 class="text-3xl font-bold text-white mb-6 animate-dynamic">Admin Dashboard</h1>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    <!-- Left Column -->
     <div class="space-y-8">
-        <!-- Post a Job Opening -->
         <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
             <h2 class="text-2xl font-bold text-white mb-4">Post a New Job Opening</h2>
             <form action="{{ url_for('post_job') }}" method="POST" class="space-y-4">
@@ -21,7 +19,6 @@
                 <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300 transform hover:scale-105">Post Job</button>
             </form>
         </div>
-        <!-- Pending Approvals -->
         <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.1s;">
             <h2 class="text-2xl font-bold text-white mb-4">Pending Approvals</h2>
             {% if pending_users %}
@@ -45,10 +42,26 @@
                 <p class="text-gray-400">No pending user approvals.</p>
             {% endif %}
         </div>
+        <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
+            <h2 class="text-2xl font-bold text-white mb-4">Assign Moderator to Candidate</h2>
+            <form action="{{ url_for('assign_moderator') }}" method="POST" class="space-y-3">
+                <select name="candidate_id" required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                    <option value="">-- Select Candidate --</option>
+                    {% for candidate in scheduled_candidates %}
+                        <option class="bg-gray-800" value="{{ candidate.id }}">{{ candidate.username }}</option>
+                    {% endfor %}
+                </select>
+                <select name="moderator_id" required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                    <option value="">-- Select Moderator --</option>
+                    {% for moderator in moderators %}
+                        <option class="bg-gray-800" value="{{ moderator.id }}">{{ moderator.username }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="w-full py-2 px-4 rounded-md text-white bg-purple-600 hover:bg-purple-700">Assign Moderator</button>
+            </form>
+        </div>
     </div>
-    <!-- Right Column -->
     <div class="space-y-8">
-        <!-- Incoming Job Applications -->
         <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.2s;">
             <h2 class="text-2xl font-bold text-white mb-4">Incoming Job Applications</h2>
             {% if applications %}
@@ -76,7 +89,6 @@
                 <p class="text-gray-400">No new job applications.</p>
             {% endif %}
         </div>
-        <!-- Manage Candidate Contacts -->
         <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.3s;">
             <h2 class="text-2xl font-bold text-white mb-4">Manage Candidate Contacts</h2>
             <form action="{{ url_for('add_contact_for_candidate') }}" method="POST" class="space-y-3">
@@ -97,7 +109,6 @@
         </div>
     </div>
 </div>
-<!-- Received Code Snippets Section -->
 <div class="mt-8 bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.5s;">
     <h2 class="text-2xl font-bold text-white mb-4">Received Code Snippets</h2>
     <div class="space-y-6">

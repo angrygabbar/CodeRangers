@@ -1,3 +1,5 @@
+# DecConnectHub/app.py
+
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -121,46 +123,39 @@ def dashboard():
 @app.route('/messages')
 @login_required
 def messages():
+    messageable_users_dict = {}
+    now = datetime.utcnow()
+
     if current_user.role == 'candidate':
-        messageable_users_dict = {}
+        # Candidates can message admins
         admins = User.query.filter_by(role='admin').all()
         for admin in admins:
             messageable_users_dict[admin.id] = admin
-        if current_user.assigned_problem:
-            creator = current_user.assigned_problem.creator
-            if creator:
-                messageable_users_dict[creator.id] = creator
-        
-        now = datetime.utcnow()
-        if current_user.test_start_time and current_user.test_end_time:
-            if current_user.test_start_time <= now <= current_user.test_end_time:
-                moderators = User.query.filter_by(role='moderator').all()
-                for moderator in moderators:
-                    messageable_users_dict[moderator.id] = moderator
 
-        for contact in current_user.allowed_contacts:
-            messageable_users_dict[contact.id] = contact
-        messageable_users = list(messageable_users_dict.values())
+        # If a test is active, candidates can message their assigned moderator
+        if current_user.test_start_time and current_user.test_end_time and current_user.test_start_time <= now <= current_user.test_end_time and current_user.moderator_id:
+            moderator = User.query.get(current_user.moderator_id)
+            if moderator:
+                messageable_users_dict[moderator.id] = moderator
 
     elif current_user.role == 'moderator':
-        messageable_users_dict = {}
+        # Moderators can message admins
         admins = User.query.filter_by(role='admin').all()
         for admin in admins:
             messageable_users_dict[admin.id] = admin
-        
-        now = datetime.utcnow()
-        active_candidates = User.query.filter(
-            User.role == 'candidate',
-            User.test_start_time <= now,
-            User.test_end_time >= now
-        ).all()
-        for candidate in active_candidates:
-            messageable_users_dict[candidate.id] = candidate
-            
-        messageable_users = list(messageable_users_dict.values())
-    else:
+
+        # Moderators can message candidates they are assigned to, if the test is active
+        assigned_candidates = User.query.filter_by(moderator_id=current_user.id).all()
+        for candidate in assigned_candidates:
+            if candidate.test_start_time and candidate.test_end_time and candidate.test_start_time <= now <= candidate.test_end_time:
+                messageable_users_dict[candidate.id] = candidate
+
+    else: # Admin and Developer
         messageable_users = User.query.filter(User.id != current_user.id).all()
-        
+        for user in messageable_users:
+            messageable_users_dict[user.id] = user
+            
+    messageable_users = list(messageable_users_dict.values())
     return render_template('messages.html', messageable_users=messageable_users)
 
 @app.route('/get_conversation/<int:other_user_id>')
@@ -331,14 +326,16 @@ def admin_dashboard():
     received_snippets = CodeSnippet.query.filter_by(recipient_id=current_user.id).order_by(CodeSnippet.timestamp.desc()).all()
     applications = JobApplication.query.order_by(JobApplication.applied_at.desc()).all()
     activities = ActivityUpdate.query.order_by(ActivityUpdate.timestamp.desc()).all()
-    # RESTORED: Fetch candidates and developers for the contact form
     candidates = User.query.filter_by(role='candidate').all()
     developers = User.query.filter_by(role='developer').all()
+    moderators = User.query.filter_by(role='moderator').all()
+    scheduled_candidates = User.query.filter(User.role == 'candidate', User.problem_statement_id != None).all()
     return render_template('admin_dashboard.html', 
                            pending_users=pending_users, 
                            received_snippets=received_snippets,
                            applications=applications, activities=activities,
-                           candidates=candidates, developers=developers)
+                           candidates=candidates, developers=developers,
+                           moderators=moderators, scheduled_candidates=scheduled_candidates)
 
 @app.route('/developer', methods=['GET', 'POST'])
 @login_required
@@ -445,6 +442,26 @@ def share_code():
         db.session.commit()
         flash('Code snippet shared successfully!', 'success')
     return redirect(url_for('candidate_dashboard'))
+
+@app.route('/assign_moderator', methods=['POST'])
+@login_required
+@role_required('admin')
+def assign_moderator():
+    candidate_id = request.form.get('candidate_id')
+    moderator_id = request.form.get('moderator_id')
+
+    candidate = User.query.get(candidate_id)
+    moderator = User.query.get(moderator_id)
+
+    if candidate and moderator and candidate.role == 'candidate' and moderator.role == 'moderator':
+        candidate.moderator_id = moderator_id
+        db.session.commit()
+        flash(f'Moderator {moderator.username} has been assigned to {candidate.username}.', 'success')
+    else:
+        flash('Invalid assignment.', 'danger')
+    
+    return redirect(url_for('admin_dashboard'))
+
 @app.route('/post_job', methods=['POST'])
 @login_required
 @role_required('admin')
