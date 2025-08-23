@@ -12,16 +12,7 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'a_very_secret_key_that_should_be_changed'
-
-# DATABASE CONFIGURATION (UPDATED FOR HEROKU)
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL:
-    # Use the Heroku PostgreSQL database
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-else:
-    # Use SQLite for local development
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///devconnect.db'
-
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///devconnect.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
 app.config['UPLOAD_FOLDER'] = 'static/resumes'
