@@ -1,0 +1,12 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Instance Folder
+# Contains sensitive information like the database in local development
+instance/
+
+# macOS files
+.DS_Store
