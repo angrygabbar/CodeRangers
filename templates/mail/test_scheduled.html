@@ -1,0 +1,48 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coding Test Scheduled</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { margin: 0; padding: 0; background-color: #f4f7f6; font-family: 'Inter', sans-serif; }
+        .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); animation: fadeIn 0.5s ease-out; }
+        .header { background-color: #4338ca; color: #ffffff; padding: 30px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; }
+        .content { padding: 30px 40px; color: #333; line-height: 1.6; }
+        .content p { margin: 0 0 15px; }
+        .details-box { background-color: #f8fafc; border-left: 5px solid #4f46e5; padding: 20px; margin: 25px 0; border-radius: 8px; }
+        .details-box h3 { margin-top: 0; color: #4338ca; }
+        .button { display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 14px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; }
+        .button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4); }
+        .footer { background-color: #eef2ff; text-align: center; padding: 20px; font-size: 12px; color: #6b7280; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Vision For The Future</h1>
+        </div>
+        <div class="content">
+            <h2>Your Coding Test is Scheduled</h2>
+            <p>Dear {{ candidate.username }},</p>
+            <p>This email serves as a confirmation that a coding test has been scheduled for you as part of our evaluation process. Please review the details below.</p>
+            <div class="details-box">
+                <h3>Test Details</h3>
+                <p><strong>Problem:</strong> {{ problem.title }}</p>
+                <p><strong>Start Time:</strong> {{ start_time_ist.strftime('%B %d, %Y at %I:%M %p') }} IST</p>
+                <p><strong>End Time:</strong> {{ end_time_ist.strftime('%B %d, %Y at %I:%M %p') }} IST</p>
+            </div>
+            <p>We recommend logging in to the platform a few minutes prior to the start time. The test will become available on your "Code Test" page.</p>
+            <p style="text-align: center; margin-top: 30px;">
+                <a href="{{ url_for('code_test', _external=True) }}" class="button">Go to Code Test Page</a>
+            </p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2025 Source Point. All rights reserved.</p>
+            <p>Best of luck!</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -44,6 +44,7 @@
         </div>
         <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
             <h2 class="text-2xl font-bold text-white mb-4">Assign Moderator to Candidate</h2>
+            {% if scheduled_candidates %}
             <form action="{{ url_for('assign_moderator') }}" method="POST" class="space-y-3">
                 <select name="candidate_id" required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
                     <option value="">-- Select Candidate --</option>
@@ -59,6 +60,12 @@
                 </select>
                 <button type="submit" class="w-full py-2 px-4 rounded-md text-white bg-purple-600 hover:bg-purple-700">Assign Moderator</button>
             </form>
+            {% else %}
+            <div class="text-center text-gray-400 p-4 bg-gray-700/20 rounded-lg">
+                <p>There are no candidates who need a moderator assigned.</p>
+                <p class="mt-2 text-sm">A candidate must first have a test scheduled from the <a href="{{ url_for('events') }}" class="text-indigo-400 hover:underline">Events Page</a> before a moderator can be assigned.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
     <div class="space-y-8">
@@ -87,6 +94,28 @@
                 </ul>
             {% else %}
                 <p class="text-gray-400">No new job applications.</p>
+            {% endif %}
+        </div>
+        <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.3s;">
+            <h2 class="text-2xl font-bold text-white mb-4">Current Moderator Assignments</h2>
+            {% if assigned_candidates_with_moderators %}
+                <ul class="space-y-3 max-h-48 overflow-y-auto pr-2">
+                    {% for candidate in assigned_candidates_with_moderators %}
+                        {% set moderator = moderators_map.get(candidate.moderator_id) %}
+                        {% if moderator %}
+                            <li class="p-3 bg-white/5 dark:bg-gray-700/20 rounded-lg animate-stagger">
+                               <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-semibold text-white">{{ candidate.username }}</p>
+                                        <p class="text-sm text-gray-400">Moderator: <strong class="text-white">{{ moderator.username }}</strong></p>
+                                    </div>
+                               </div>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-gray-400">No moderators are currently assigned to candidates.</p>
             {% endif %}
         </div>
         <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.3s;">
