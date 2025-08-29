@@ -3,7 +3,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-# IMPORT THE NEW MODEL
 from models import db, User, Message, ActivityUpdate, CodeSnippet, JobOpening, JobApplication, CodeTestSubmission, ProblemStatement, AffiliateAd
 from functools import wraps
 import requests
@@ -55,24 +54,24 @@ SECRET_QUESTIONS = [
 def send_email(to, subject, template, cc=None, **kwargs):
     """Function to send an email. Returns True on success, False on failure."""
     with app.app_context():
-        if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
-            app.logger.error("Email credentials (MAIL_USERNAME, MAIL_PASSWORD) are not set in environment variables.")
-            flash("Email credentials are not configured. Please contact the administrator.", "danger")
-            return False
+        # Create a request context to make url_for and other context-dependent functions available
+        with app.test_request_context():
+            if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
+                app.logger.error("Email credentials (MAIL_USERNAME, MAIL_PASSWORD) are not set in environment variables.")
+                return False
             
-        try:
-            if cc and not isinstance(cc, list):
-                cc = [cc]
-            msg = MailMessage(subject, recipients=[to], cc=cc)
-            msg.html = render_template(template, **kwargs)
-            mail.send(msg)
-            app.logger.info(f"Email sent successfully to {to} with CC: {cc}")
-            return True
-        except Exception as e:
-            error_message = f"Failed to send email to {to}. Error: {str(e)}"
-            app.logger.error(error_message)
-            flash(f"An error occurred while sending an email. Please check the server logs. Error: {e}", "danger")
-            return False
+            try:
+                if cc and not isinstance(cc, list):
+                    cc = [cc]
+                msg = MailMessage(subject, recipients=[to], cc=cc)
+                msg.html = render_template(template, **kwargs)
+                mail.send(msg)
+                app.logger.info(f"Email sent successfully to {to} with CC: {cc}")
+                return True
+            except Exception as e:
+                error_message = f"Failed to send email to {to}. Error: {str(e)}"
+                app.logger.error(error_message)
+                return False
 
 # --- Background Scheduler for Email Reminders and Test Completion ---
 def send_test_reminders():
@@ -992,7 +991,9 @@ def delete_code_test_submission(submission_id):
 
 @app.context_processor
 def inject_messages():
-    if current_user.is_authenticated:
+    # In background tasks, current_user may not be available.
+    # Check for its existence and authentication status before querying.
+    if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
         messages = Message.query.filter(
             (Message.sender_id == current_user.id) | (Message.recipient_id == current_user.id)
         ).order_by(Message.timestamp.desc()).all()
@@ -1059,3 +1060,5 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True, use_reloader=False)
+
+
