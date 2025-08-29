@@ -4,10 +4,12 @@
 <div class="space-y-8">
     <h1 class="text-3xl font-bold text-white animate-dynamic">Manage Coding Events</h1>
 
+    <!-- Create & Assign Section -->
     {% if current_user.role != 'moderator' %}
     <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
         <h2 class="text-2xl font-bold text-white mb-4">Schedule a New Event</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Create New Problem -->
             <div>
                 <h3 class="text-lg font-semibold mb-2 text-white">1. Create a New Problem</h3>
                 <form action="{{ url_for('create_problem') }}" method="POST" class="space-y-3">
@@ -16,6 +18,7 @@
                     <button type="submit" class="w-full py-2 px-4 rounded-md text-white bg-blue-600 hover:bg-blue-700">Create Problem</button>
                 </form>
             </div>
+            <!-- Assign Problem to Candidate -->
             <div>
                 <h3 class="text-lg font-semibold mb-2 text-white">2. Assign Problem & Schedule Time</h3>
                 <form action="{{ url_for('assign_problem') }}" method="POST" class="space-y-3">
@@ -46,6 +49,7 @@
     </div>
     {% endif %}
 
+    <!-- Scheduled Events List -->
     <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
         <h2 class="text-2xl font-bold text-white mb-4">Scheduled Events</h2>
         <div class="space-y-4">
@@ -59,11 +63,13 @@
                             <p class="text-sm text-gray-400">Ends: {{ event.end_time_ist }} IST</p>
                         </div>
                         <div class="flex items-start space-x-2 mt-4 md:mt-0">
+                            <!-- Reschedule Form -->
                             <form action="{{ url_for('reschedule_event', user_id=event.id) }}" method="POST" class="flex items-center space-x-2">
                                 <input type="datetime-local" name="new_start_time" required class="px-2 py-1 border text-xs border-gray-600 rounded-md bg-gray-700/50 text-white">
                                 <input type="datetime-local" name="new_end_time" required class="px-2 py-1 border text-xs border-gray-600 rounded-md bg-gray-700/50 text-white">
                                 <button type="submit" class="px-3 py-1 text-xs rounded-md text-white bg-yellow-600 hover:bg-yellow-700">Reschedule</button>
                             </form>
+                            <!-- Cancel Button -->
                             <a href="{{ url_for('cancel_event', user_id=event.id) }}" class="px-3 py-1 text-xs rounded-md text-white bg-red-600 hover:bg-red-700">Cancel</a>
                         </div>
                     </div>
@@ -74,6 +80,7 @@
         </div>
     </div>
     
+    <!-- Completed Events List -->
     <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
         <h2 class="text-2xl font-bold text-white mb-4">Completed Events</h2>
         <div class="space-y-4">
@@ -89,13 +96,17 @@
         </div>
     </div>
 
+    <!-- Received Code Tests Section -->
     {% if current_user.role != 'moderator' %}
     <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 backdrop-blur-sm border border-white/10">
         <h2 class="text-2xl font-bold text-white mb-4">Received Code Test Submissions</h2>
         <div class="space-y-6">
             {% for test in received_tests %}
                 <div class="bg-white/5 dark:bg-gray-700/20 rounded-lg p-4 animate-stagger">
-                    <p class="text-sm text-gray-400 mb-2">From: <strong class="text-white">{{ test.candidate_submitter.username }}</strong> on {{ test.submitted_at.strftime('%b %d, %Y') }}</p>
+                    <div class="flex justify-between items-start">
+                        <p class="text-sm text-gray-400 mb-2">From: <strong class="text-white">{{ test.candidate_submitter.username }}</strong> on {{ test.submitted_at.strftime('%b %d, %Y') }}</p>
+                        <a href="{{ url_for('delete_code_test_submission', submission_id=test.id) }}" class="px-3 py-1 text-xs rounded-md text-white bg-red-600 hover:bg-red-700">Delete</a>
+                    </div>
                     <h3 class="font-semibold text-white mt-4">Submitted Code ({{ test.language.title() }}):</h3>
                     <pre><code class="language-{{ test.language }}">{{ test.code }}</code></pre>
                     <h3 class="font-semibold text-white mt-4">Output:</h3>

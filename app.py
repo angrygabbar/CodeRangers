@@ -56,7 +56,8 @@ def send_email(to, subject, template, cc=None, **kwargs):
     """Function to send an email. Returns True on success, False on failure."""
     with app.app_context():
         if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
-            app.logger.error("Email credentials are not set.")
+            app.logger.error("Email credentials (MAIL_USERNAME, MAIL_PASSWORD) are not set in environment variables.")
+            flash("Email credentials are not configured. Please contact the administrator.", "danger")
             return False
             
         try:
@@ -68,8 +69,9 @@ def send_email(to, subject, template, cc=None, **kwargs):
             app.logger.info(f"Email sent successfully to {to} with CC: {cc}")
             return True
         except Exception as e:
-            error_message = f"Email Error: {str(e)}"
-            app.logger.error(f"Error sending email to {to}: {error_message}")
+            error_message = f"Failed to send email to {to}. Error: {str(e)}"
+            app.logger.error(error_message)
+            flash(f"An error occurred while sending an email. Please check the server logs. Error: {e}", "danger")
             return False
 
 # --- Background Scheduler for Email Reminders and Test Completion ---
@@ -123,7 +125,7 @@ def check_completed_tests():
                 problem_title = candidate.assigned_problem.title if candidate.assigned_problem else "your assigned problem"
                 
                 # Notify candidate
-                send_email(
+                email_sent_candidate = send_email(
                     to=candidate.email,
                     subject="Your Coding Test is Complete",
                     template="mail/test_completed_candidate.html",
@@ -132,7 +134,7 @@ def check_completed_tests():
                 )
 
                 # Notify admins
-                for admin in admins:
+                email_sent_admins = all([
                     send_email(
                         to=admin.email,
                         subject=f"Coding Test Completed by {candidate.username}",
@@ -140,11 +142,16 @@ def check_completed_tests():
                         admin=admin,
                         candidate=candidate,
                         problem_title=problem_title
-                    )
+                    ) for admin in admins
+                ])
                 
-                candidate.test_completed = True
-                db.session.commit()
-                app.logger.info(f"Marked test as complete for {candidate.username}")
+                if email_sent_candidate and email_sent_admins:
+                    candidate.test_completed = True
+                    db.session.commit()
+                    app.logger.info(f"Marked test as complete for {candidate.username}")
+                else:
+                    app.logger.error(f"Failed to send completion emails for {candidate.username}, test status not updated.")
+
 
 scheduler = BackgroundScheduler(daemon=True)
 scheduler.add_job(send_test_reminders, 'interval', minutes=1)
@@ -875,7 +882,7 @@ def events():
         if event.test_end_time:
             event.end_time_ist = (event.test_end_time + ist_offset).strftime('%b %d, %Y at %I:%M %p')
 
-    received_tests = CodeTestSubmission.query.order_by(CodeTestSubmission.submitted_at.desc()).all()
+    received_tests = CodeTestSubmission.query.filter_by(recipient_id=current_user.id).order_by(CodeTestSubmission.submitted_at.desc()).all()
 
     return render_template('events.html', 
                            candidates=candidates, 
@@ -969,6 +976,18 @@ def delete_snippet(snippet_id):
     else:
         flash('You do not have permission to delete this snippet.', 'danger')
     return redirect(url_for('dashboard'))
+
+@app.route('/delete_code_test_submission/<int:submission_id>')
+@login_required
+def delete_code_test_submission(submission_id):
+    submission = CodeTestSubmission.query.get_or_404(submission_id)
+    if submission.recipient_id == current_user.id:
+        db.session.delete(submission)
+        db.session.commit()
+        flash('Code test submission deleted successfully.', 'success')
+    else:
+        flash('You do not have permission to delete this submission.', 'danger')
+    return redirect(url_for('events'))
 
 
 @app.context_processor
