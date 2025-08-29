@@ -3,7 +3,8 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Message, ActivityUpdate, CodeSnippet, JobOpening, JobApplication, CodeTestSubmission, ProblemStatement
+# IMPORT THE NEW MODEL
+from models import db, User, Message, ActivityUpdate, CodeSnippet, JobOpening, JobApplication, CodeTestSubmission, ProblemStatement, AffiliateAd
 from functools import wraps
 import requests
 import time
@@ -22,11 +23,10 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
 app.config['UPLOAD_FOLDER'] = 'static/resumes'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# Mail Configuration for GoDaddy Professional Email (which uses Titan Mail)
+# Mail Configuration
 app.config['MAIL_SERVER'] = 'smtpout.secureserver.net'
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_SSL'] = True
-# IMPORTANT: Use environment variables for security.
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = ('DevConnect Hub', os.environ.get('MAIL_USERNAME'))
@@ -54,31 +54,28 @@ SECRET_QUESTIONS = [
 
 def send_email(to, subject, template, cc=None, **kwargs):
     """Function to send an email. Returns True on success, False on failure."""
-    if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
-        app.logger.error("Email credentials are not set.")
-        flash('Email credentials are not set in the environment.', 'danger')
-        return False
-        
-    try:
-        # The app.test_request_context() is not needed when sending mail from a view function.
-        if cc and not isinstance(cc, list):
-            cc = [cc]
-        msg = MailMessage(subject, recipients=[to], cc=cc)
-        msg.html = render_template(template, **kwargs)
-        mail.send(msg)
-        app.logger.info(f"Email sent successfully to {to} with CC: {cc}")
-        return True
-    except Exception as e:
-        error_message = f"Email Error: {str(e)}"
-        app.logger.error(f"Error sending email to {to}: {error_message}")
-        flash(error_message, 'danger') # Flash the specific error
-        return False
+    with app.app_context():
+        if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
+            app.logger.error("Email credentials are not set.")
+            return False
+            
+        try:
+            if cc and not isinstance(cc, list):
+                cc = [cc]
+            msg = MailMessage(subject, recipients=[to], cc=cc)
+            msg.html = render_template(template, **kwargs)
+            mail.send(msg)
+            app.logger.info(f"Email sent successfully to {to} with CC: {cc}")
+            return True
+        except Exception as e:
+            error_message = f"Email Error: {str(e)}"
+            app.logger.error(f"Error sending email to {to}: {error_message}")
+            return False
 
-# --- Background Scheduler for Email Reminders ---
+# --- Background Scheduler for Email Reminders and Test Completion ---
 def send_test_reminders():
     """Checks for tests starting in ~15 mins and sends reminders."""
     with app.app_context():
-        print(f"[{datetime.now()}] Running reminder check...") # Heartbeat for debugging
         now = datetime.utcnow()
         reminder_window_start = now + timedelta(minutes=14)
         reminder_window_end = now + timedelta(minutes=16)
@@ -88,9 +85,6 @@ def send_test_reminders():
             User.test_start_time.between(reminder_window_start, reminder_window_end),
             User.reminder_sent == False
         ).all()
-
-        if candidates_to_remind:
-            print(f"Found {len(candidates_to_remind)} candidate(s) to remind.")
 
         for candidate in candidates_to_remind:
             app.logger.info(f"Sending reminder to {candidate.username} for test at {candidate.test_start_time}")
@@ -112,8 +106,49 @@ def send_test_reminders():
             candidate.reminder_sent = True
             db.session.commit()
 
+def check_completed_tests():
+    """Checks for tests that have ended and sends completion notifications."""
+    with app.app_context():
+        now = datetime.utcnow()
+        completed_candidates = User.query.filter(
+            User.role == 'candidate',
+            User.test_end_time <= now,
+            User.test_completed == False,
+            User.problem_statement_id != None
+        ).all()
+
+        if completed_candidates:
+            admins = User.query.filter_by(role='admin').all()
+            for candidate in completed_candidates:
+                problem_title = candidate.assigned_problem.title if candidate.assigned_problem else "your assigned problem"
+                
+                # Notify candidate
+                send_email(
+                    to=candidate.email,
+                    subject="Your Coding Test is Complete",
+                    template="mail/test_completed_candidate.html",
+                    candidate=candidate,
+                    problem_title=problem_title
+                )
+
+                # Notify admins
+                for admin in admins:
+                    send_email(
+                        to=admin.email,
+                        subject=f"Coding Test Completed by {candidate.username}",
+                        template="mail/test_completed_admin.html",
+                        admin=admin,
+                        candidate=candidate,
+                        problem_title=problem_title
+                    )
+                
+                candidate.test_completed = True
+                db.session.commit()
+                app.logger.info(f"Marked test as complete for {candidate.username}")
+
 scheduler = BackgroundScheduler(daemon=True)
 scheduler.add_job(send_test_reminders, 'interval', minutes=1)
+scheduler.add_job(check_completed_tests, 'interval', minutes=1)
 scheduler.start()
 # --- End Scheduler ---
 
@@ -141,9 +176,47 @@ def role_required(roles):
         return decorated_view
     return wrapper
 
-# (Home, Contact, Logout routes remain the same)
 @app.route('/')
 def home(): return render_template('home.html')
+
+@app.route('/offers')
+def offers():
+    ads = AffiliateAd.query.all()
+    return render_template('offers.html', ads=ads)
+
+@app.route('/manage_ads', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def manage_ads():
+    if request.method == 'POST':
+        ad_name = request.form.get('ad_name')
+        affiliate_link = request.form.get('affiliate_link')
+        
+        existing_ad = AffiliateAd.query.filter_by(ad_name=ad_name).first()
+        if existing_ad:
+            existing_ad.affiliate_link = affiliate_link
+            flash(f'Ad "{ad_name}" has been updated.', 'success')
+        else:
+            new_ad = AffiliateAd(ad_name=ad_name, affiliate_link=affiliate_link)
+            db.session.add(new_ad)
+            flash(f'New ad "{ad_name}" has been added.', 'success')
+        db.session.commit()
+        return redirect(url_for('manage_ads'))
+    
+    ads = AffiliateAd.query.all()
+    return render_template('manage_ads.html', ads=ads)
+
+@app.route('/delete_ad/<int:ad_id>')
+@login_required
+@role_required('admin')
+def delete_ad(ad_id):
+    ad_to_delete = AffiliateAd.query.get_or_404(ad_id)
+    db.session.delete(ad_to_delete)
+    db.session.commit()
+    flash(f'Ad "{ad_to_delete.ad_name}" has been deleted.', 'success')
+    return redirect(url_for('manage_ads'))
+
+
 @app.route('/contact')
 def contact(): return render_template('contact.html')
 @app.route('/login-register', methods=['GET', 'POST'])
@@ -202,10 +275,6 @@ def dashboard():
 @app.route('/messages')
 @login_required
 def messages():
-    if current_user.role == 'moderator':
-        flash('Messaging is not available for your role at this time.', 'info')
-        return redirect(url_for('dashboard'))
-
     messageable_users_dict = {}
     now = datetime.utcnow()
 
@@ -213,13 +282,29 @@ def messages():
         admins = User.query.filter_by(role='admin').all()
         for admin in admins:
             messageable_users_dict[admin.id] = admin
-        if current_user.test_start_time and current_user.test_end_time and current_user.test_start_time <= now <= current_user.test_end_time and current_user.moderator_id:
+        if current_user.test_start_time and current_user.test_end_time and \
+           current_user.test_start_time <= now <= current_user.test_end_time and \
+           current_user.moderator_id:
             moderator = User.query.get(current_user.moderator_id)
             if moderator:
                 messageable_users_dict[moderator.id] = moderator
-    else: # Admin and Developer
-        messageable_users = User.query.filter(User.id != current_user.id).all()
-        for user in messageable_users:
+    
+    elif current_user.role == 'moderator':
+        admins = User.query.filter_by(role='admin').all()
+        for admin in admins:
+            messageable_users_dict[admin.id] = admin
+        
+        assigned_candidates = User.query.filter(
+            User.moderator_id == current_user.id,
+            User.test_start_time <= now,
+            User.test_end_time >= now
+        ).all()
+        for candidate in assigned_candidates:
+            messageable_users_dict[candidate.id] = candidate
+
+    elif current_user.role in ['admin', 'developer']:
+        users = User.query.filter(User.id != current_user.id).all()
+        for user in users:
             messageable_users_dict[user.id] = user
             
     messageable_users = list(messageable_users_dict.values())
@@ -402,7 +487,6 @@ def admin_dashboard():
         User.moderator_id == None
     ).all()
     
-    # New query for moderator assignments
     assigned_candidates_with_moderators = User.query.filter(
         User.role == 'candidate',
         User.moderator_id.isnot(None)
@@ -486,8 +570,6 @@ def code_test():
     messageable_users = User.query.filter(User.role.in_(['admin', 'developer'])).all()
     return render_template('code_test.html', messageable_users=messageable_users)
 
-# (All other existing routes remain the same)
-# ...
 @app.route('/approve_user/<int:user_id>')
 @login_required
 @role_required('admin')
@@ -521,14 +603,15 @@ def send_message():
         db.session.commit()
         flash('Message sent!', 'success')
     return redirect(url_for('messages'))
+
 @app.route('/share_code', methods=['POST'])
 @login_required
 @role_required('candidate')
 def share_code():
     recipient_id = request.form.get('recipient_id')
-    code = request.form.get('code')
+    code = request.form.get('java_code')
     language = "java"
-    if not recipient_id or not code.strip():
+    if not recipient_id or not code or not code.strip():
         flash('Please select a recipient and provide code.', 'danger')
     else:
         new_snippet = CodeSnippet(sender_id=current_user.id, recipient_id=recipient_id, code=code, language=language)
@@ -547,7 +630,6 @@ def assign_moderator():
     candidate = User.query.get(candidate_id)
     moderator = User.query.get(moderator_id)
 
-    # --- Robust Validation ---
     if not candidate or not moderator or moderator.role != 'moderator':
         flash("Invalid user selection.", 'danger')
         return redirect(url_for('admin_dashboard'))
@@ -555,13 +637,11 @@ def assign_moderator():
     if not all([candidate.assigned_problem, candidate.test_start_time, candidate.test_end_time]):
         flash(f"Error: Candidate {candidate.username} does not have a complete test schedule. Please assign or reschedule the test from the Events page.", 'danger')
         return redirect(url_for('admin_dashboard'))
-    # --- End Validation ---
 
     candidate.moderator_id = moderator_id
     db.session.commit()
     app.logger.info(f"Moderator {moderator.id} assigned to candidate {candidate.id} in DB.")
 
-    # Prepare and send notification email
     ist_offset = timedelta(hours=5, minutes=30)
     email_context = {
         "moderator": moderator,
@@ -715,8 +795,9 @@ def assign_problem():
     candidate.problem_statement_id = problem_id
     candidate.test_start_time = start_time_utc
     candidate.test_end_time = end_time_utc
-    candidate.reminder_sent = False # Reset reminder status
-    candidate.moderator_id = None # Explicitly clear moderator on new/re-assignment
+    candidate.reminder_sent = False 
+    candidate.moderator_id = None
+    candidate.test_completed = False
     db.session.commit()
     
     send_email(
@@ -783,10 +864,12 @@ def reset_with_question(user_id):
 def events():
     candidates = User.query.filter_by(role='candidate').all()
     problems = ProblemStatement.query.all()
-    scheduled_events = User.query.filter(User.problem_statement_id != None).all()
+    
+    scheduled_events = User.query.filter(User.problem_statement_id != None, User.test_completed == False).all()
+    completed_events = User.query.filter(User.problem_statement_id != None, User.test_completed == True).all()
     
     ist_offset = timedelta(hours=5, minutes=30)
-    for event in scheduled_events:
+    for event in scheduled_events + completed_events:
         if event.test_start_time:
             event.start_time_ist = (event.test_start_time + ist_offset).strftime('%b %d, %Y at %I:%M %p')
         if event.test_end_time:
@@ -794,7 +877,12 @@ def events():
 
     received_tests = CodeTestSubmission.query.order_by(CodeTestSubmission.submitted_at.desc()).all()
 
-    return render_template('events.html', candidates=candidates, problems=problems, scheduled_events=scheduled_events, received_tests=received_tests)
+    return render_template('events.html', 
+                           candidates=candidates, 
+                           problems=problems, 
+                           scheduled_events=scheduled_events, 
+                           completed_events=completed_events,
+                           received_tests=received_tests)
 
 @app.route('/reschedule_event/<int:user_id>', methods=['POST'])
 @login_required
@@ -820,7 +908,8 @@ def reschedule_event(user_id):
     candidate.test_start_time = start_time_ist - ist_offset
     candidate.test_end_time = end_time_ist - ist_offset
     candidate.reminder_sent = False 
-    candidate.moderator_id = None # Also clear moderator on reschedule
+    candidate.moderator_id = None
+    candidate.test_completed = False
     db.session.commit()
 
     send_email(
@@ -851,7 +940,7 @@ def cancel_event(user_id):
     candidate.test_start_time = None
     candidate.test_end_time = None
     candidate.reminder_sent = False
-    candidate.moderator_id = None # CRITICAL: Clear the moderator assignment
+    candidate.moderator_id = None 
     db.session.commit()
 
     send_email(
@@ -869,6 +958,18 @@ def cancel_event(user_id):
     else:
         return redirect(url_for('events'))
 
+@app.route('/delete_snippet/<int:snippet_id>')
+@login_required
+def delete_snippet(snippet_id):
+    snippet = CodeSnippet.query.get_or_404(snippet_id)
+    if snippet.recipient_id == current_user.id:
+        db.session.delete(snippet)
+        db.session.commit()
+        flash('Code snippet deleted successfully.', 'success')
+    else:
+        flash('You do not have permission to delete this snippet.', 'danger')
+    return redirect(url_for('dashboard'))
+
 
 @app.context_processor
 def inject_messages():
@@ -879,8 +980,63 @@ def inject_messages():
         return dict(messages=messages)
     return dict(messages=[])
 
+@app.route('/broadcast_email', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def broadcast_email():
+    if request.method == 'POST':
+        subject = request.form.get('subject')
+        body = request.form.get('body')
+        if not subject or not body:
+            flash('Subject and body are required.', 'danger')
+            return redirect(url_for('broadcast_email'))
+        
+        users = User.query.all()
+        for user in users:
+            send_email(
+                to=user.email,
+                subject=subject,
+                template="mail/broadcast.html",
+                user=user,
+                body=body
+            )
+        flash(f'Email has been sent to {len(users)} users.', 'success')
+        return redirect(url_for('admin_dashboard'))
+    return render_template('broadcast_email.html')
+
+@app.route('/send_specific_email', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def send_specific_email():
+    if request.method == 'POST':
+        user_ids = request.form.getlist('user_ids')
+        subject = request.form.get('subject')
+        body = request.form.get('body')
+
+        if not user_ids:
+            flash('Please select at least one user.', 'danger')
+            return redirect(url_for('send_specific_email'))
+        
+        if not subject or not body:
+            flash('Subject and body are required.', 'danger')
+            return redirect(url_for('send_specific_email'))
+
+        users = User.query.filter(User.id.in_(user_ids)).all()
+        for user in users:
+            send_email(
+                to=user.email,
+                subject=subject,
+                template="mail/broadcast.html",
+                user=user,
+                body=body
+            )
+        flash(f'Email has been sent to {len(users)} users.', 'success')
+        return redirect(url_for('admin_dashboard'))
+
+    users = User.query.all()
+    return render_template('send_specific_email.html', users=users)
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    # use_reloader=False is important for APScheduler to work correctly in debug mode
     app.run(debug=True, use_reloader=False)

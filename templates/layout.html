@@ -27,9 +27,7 @@
                     {% if current_user.is_authenticated %}
                         <a href="{{ url_for('dashboard') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Dashboard</a>
                         <a href="{{ url_for('profile') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Profile</a>
-                        {% if current_user.role != 'moderator' %}
-                            <a href="{{ url_for('messages') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Messages</a>
-                        {% endif %}
+                        <a href="{{ url_for('messages') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Messages</a>
                         {% if current_user.role == 'candidate' %}
                             <a href="{{ url_for('code_test') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Code Test</a>
                         {% endif %}
@@ -41,6 +39,7 @@
                         {% endif %}
                     {% else %}
                         <a href="{{ url_for('home') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Home</a>
+                        <a href="{{ url_for('offers') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Offers</a>
                         <a href="{{ url_for('contact') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-indigo-400">Contact Us</a>
                     {% endif %}
                 </div>
@@ -65,9 +64,7 @@
                 {% if current_user.is_authenticated %}
                     <a href="{{ url_for('dashboard') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Dashboard</a>
                     <a href="{{ url_for('profile') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Profile</a>
-                    {% if current_user.role != 'moderator' %}
-                        <a href="{{ url_for('messages') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Messages</a>
-                    {% endif %}
+                    <a href="{{ url_for('messages') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Messages</a>
                     {% if current_user.role == 'candidate' %}
                         <a href="{{ url_for('code_test') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Code Test</a>
                     {% endif %}
@@ -80,6 +77,7 @@
                     <a href="{{ url_for('logout') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Logout</a>
                 {% else %}
                     <a href="{{ url_for('home') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Home</a>
+                    <a href="{{ url_for('offers') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Offers</a>
                     <a href="{{ url_for('contact') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Contact Us</a>
                     <a href="{{ url_for('login_register') }}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">Login / Register</a>
                 {% endif %}

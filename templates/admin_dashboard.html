@@ -6,6 +6,27 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <div class="space-y-8">
         <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
+            <h2 class="text-2xl font-bold text-white mb-4">Manage Affiliate Ads</h2>
+            <p class="text-gray-300 mb-4">Add, update, or remove affiliate ads that are displayed on the public affiliates page.</p>
+            <a href="{{ url_for('manage_ads') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                Go to Ad Management
+            </a>
+        </div>
+        <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
+            <h2 class="text-2xl font-bold text-white mb-4">Broadcast Email to All Users</h2>
+            <p class="text-gray-300 mb-4">Send an email notification to all registered users for important announcements like maintenance or outages.</p>
+            <a href="{{ url_for('broadcast_email') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700">
+                Go to Email Broadcaster
+            </a>
+        </div>
+        <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
+            <h2 class="text-2xl font-bold text-white mb-4">Send Email to Specific Users</h2>
+            <p class="text-gray-300 mb-4">Compose and send an email to a selected group of users.</p>
+            <a href="{{ url_for('send_specific_email') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700">
+                Compose Email
+            </a>
+        </div>
+        <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
             <h2 class="text-2xl font-bold text-white mb-4">Post a New Job Opening</h2>
             <form action="{{ url_for('post_job') }}" method="POST" class="space-y-4">
                 <div>
@@ -16,7 +37,7 @@
                     <label for="job_description" class="block text-sm font-medium text-gray-300">Job Description</label>
                     <textarea name="job_description" rows="4" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition"></textarea>
                 </div>
-                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300 transform hover:scale-105">Post Job</button>
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Post Job</button>
             </form>
         </div>
         <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.1s;">
@@ -33,7 +54,7 @@
                                 </div>
                             </div>
                             <div class="flex-shrink-0">
-                                <a href="{{ url_for('approve_user', user_id=user.id) }}" class="px-3 py-1 bg-green-500 text-white text-sm font-semibold rounded-md hover:bg-green-600 transition-transform hover:scale-105">Approve</a>
+                                <a href="{{ url_for('approve_user', user_id=user.id) }}" class="px-3 py-1 bg-green-500 text-white text-sm font-semibold rounded-md hover:bg-green-600">Approve</a>
                             </div>
                         </li>
                     {% endfor %}
@@ -63,12 +84,29 @@
             {% else %}
             <div class="text-center text-gray-400 p-4 bg-gray-700/20 rounded-lg">
                 <p>There are no candidates who need a moderator assigned.</p>
-                <p class="mt-2 text-sm">A candidate must first have a test scheduled from the <a href="{{ url_for('events') }}" class="text-indigo-400 hover:underline">Events Page</a> before a moderator can be assigned.</p>
+                <p class="mt-2 text-sm">A candidate must first have a test scheduled from the <a href="{{ url_for('events') }}" class="text-indigo-400 hover:underline">Events Page</a>.</p>
             </div>
             {% endif %}
         </div>
     </div>
     <div class="space-y-8">
+        <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.2s;">
+            <h2 class="text-2xl font-bold text-white mb-4">Team Activity Feed</h2>
+            <ul class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                {% for activity in activities %}
+                <li class="flex items-start space-x-4 p-3 bg-white/5 dark:bg-gray-700/20 rounded-lg animate-stagger">
+                    <img src="{{ activity.author.avatar_url }}" alt="Avatar" class="rounded-full w-12 h-12 flex-shrink-0">
+                    <div>
+                        <p class="font-semibold text-white">{{ activity.author.username }}</p>
+                        <p class="text-gray-300 mt-1">{{ activity.content }}</p>
+                        <p class="text-xs text-gray-500 mt-2">{{ activity.timestamp.strftime('%b %d, %Y at %I:%M %p') }}</p>
+                    </div>
+                </li>
+                {% else %}
+                    <li class="text-gray-400">No activity updates yet.</li>
+                {% endfor %}
+            </ul>
+        </div>
         <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10" style="animation-delay: 0.2s;">
             <h2 class="text-2xl font-bold text-white mb-4">Incoming Job Applications</h2>
             {% if applications %}
@@ -86,7 +124,7 @@
                                         <a href="{{ url_for('reject_application', app_id=app.id) }}" class="px-3 py-1 bg-red-500 text-white text-xs font-semibold rounded-md hover:bg-red-600">Reject</a>
                                     </div>
                                 {% else %}
-                                     <span class="px-2 py-1 text-xs font-semibold rounded-full {% if app.status == 'accepted' %}text-green-800 bg-green-100 dark:bg-green-900 dark:text-green-200{% else %}text-red-800 bg-red-100 dark:bg-red-900 dark:text-red-200{% endif %}">{{ app.status.title() }}</span>
+                                     <span class="px-2 py-1 text-xs font-semibold rounded-full {% if app.status == 'accepted' %}text-green-800 bg-green-100{% else %}text-red-800 bg-red-100{% endif %}">{{ app.status.title() }}</span>
                                 {% endif %}
                            </div>
                         </li>
@@ -143,7 +181,10 @@
     <div class="space-y-6">
         {% for snippet in received_snippets %}
             <div class="bg-white/5 dark:bg-gray-700/20 rounded-lg p-4 animate-stagger">
-                <p class="text-sm text-gray-400 mb-2">From: <strong class="text-white">{{ snippet.snippet_sender.username }}</strong> on {{ snippet.timestamp.strftime('%b %d, %Y') }}</p>
+                <div class="flex justify-between items-start">
+                    <p class="text-sm text-gray-400 mb-2">From: <strong class="text-white">{{ snippet.snippet_sender.username }}</strong> on {{ snippet.timestamp.strftime('%b %d, %Y') }}</p>
+                    <a href="{{ url_for('delete_snippet', snippet_id=snippet.id) }}" class="px-3 py-1 text-xs rounded-md text-white bg-red-600 hover:bg-red-700">Delete</a>
+                </div>
                 <pre><code class="language-{{ snippet.language }}">{{ snippet.code }}</code></pre>
             </div>
         {% else %}

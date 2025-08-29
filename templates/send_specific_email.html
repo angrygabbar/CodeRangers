@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{% block title %}Send Email to Specific Users{% endblock %}
+{% block content %}
+<div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
+    <h1 class="text-3xl font-bold text-white mb-4">Send Email to Specific Users</h1>
+    <form action="{{ url_for('send_specific_email') }}" method="POST" class="space-y-4">
+        <div>
+            <label for="user_ids" class="block text-sm font-medium text-gray-300">Select Users (multiple can be selected)</label>
+            <select name="user_ids" id="user_ids" multiple required class="mt-1 block w-full h-60 px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                {% for user in users %}
+                    <option value="{{ user.id }}">{{ user.username }} ({{ user.email }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="subject" class="block text-sm font-medium text-gray-300">Subject</label>
+            <input type="text" name="subject" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition">
+        </div>
+        <div>
+            <label for="body" class="block text-sm font-medium text-gray-300">Body</label>
+            <textarea name="body" rows="10" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition"></textarea>
+        </div>
+        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Send Email</button>
+    </form>
+</div>
+{% endblock %}

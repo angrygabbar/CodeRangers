@@ -1,0 +1,51 @@
+/* General Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+
+/* Button Pulse Animation */
+@keyframes pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+}
+.animate-pulse-button { animation: pulse 2s infinite; }
+
+/* Floating animation for graphics */
+@keyframes float {
+	0% { transform: translatey(0px); }
+	50% { transform: translatey(-15px); }
+	100% { transform: translatey(0px); }
+}
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+body {
+    font-family: sans-serif;
+    overflow-x: hidden; /* Prevent horizontal scrollbar from 3D background */
+}
+
+/* Interactive Card Tilt Effect */
+.interactive-card {
+    transform-style: preserve-3d;
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.interactive-card:hover {
+    transform: perspective(1000px) rotateY(var(--rotateY)) rotateX(var(--rotateX)) scale3d(1.05, 1.05, 1.05);
+}
+
+/* Styles for Drag Handle */
+.drag-handle {
+    cursor: grab;
+    padding: 0.5rem;
+    display: inline-block;
+    color: #a5b4fc; /* A subtle purple to match the theme */
+}
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Style for the sortable item being dragged */
+.sortable-ghost {
+    opacity: 0.4;
+    background: #4f46e5;
+}

@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% block title %}Offers{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-8 md:p-12 animate-dynamic backdrop-blur-sm border border-white/10">
+        <h1 class="text-4xl font-extrabold text-center text-white mb-4">Today's Offers</h1>
+        <p class="mt-4 text-lg text-center text-gray-300 mb-10">
+            Explore a curated selection of exciting offers and deals for Users.
+        </p>
+
+        <div class="space-y-4">
+            {% for ad in ads %}
+            <a href="{{ ad.affiliate_link }}" target="_blank" rel="noopener noreferrer" class="block bg-gray-700/20 rounded-lg p-4 transform hover:scale-105 transition-transform duration-300">
+                <h3 class="text-xl font-bold text-indigo-400">{{ ad.ad_name }}</h3>
+            </a>
+            {% else %}
+            <p class="text-center text-gray-400">No offers are available at this time.</p>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}
