@@ -34,7 +34,7 @@ class User(UserMixin, db.Model):
     test_end_time = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     reminder_sent = db.Column(db.Boolean, default=False, nullable=False)
-    test_completed = db.Column(db.Boolean, default=False, nullable=False) # New field
+    test_completed = db.Column(db.Boolean, default=False, nullable=False) 
 
     moderator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     mobile_number = db.Column(db.String(20), nullable=True)
@@ -46,6 +46,7 @@ class User(UserMixin, db.Model):
 
     secret_question = db.Column(db.String(255), nullable=True)
     secret_answer_hash = db.Column(db.String(128), nullable=True)
+    meeting_link = db.Column(db.String(255), nullable=True)
 
     allowed_contacts = db.relationship('User', secondary=candidate_contacts,
                                        primaryjoin=(candidate_contacts.c.candidate_id == id),
@@ -111,7 +112,6 @@ class CodeTestSubmission(db.Model):
     language = db.Column(db.String(50), nullable=False, default='java')
     submitted_at = db.Column(db.DateTime, index=True, default=datetime.utcnow)
 
-# NEW: Model for Affiliate Ads
 class AffiliateAd(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ad_name = db.Column(db.String(100), nullable=False, unique=True)

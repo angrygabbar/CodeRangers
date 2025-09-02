@@ -4,7 +4,13 @@
 <h1 class="text-3xl font-bold text-white mb-6 animate-dynamic">Candidate Dashboard</h1>
 
 <div id="sortable-container" class="space-y-8">
-    <!-- Job Openings -->
+    {% if current_user.meeting_link %}
+    <div class="sortable-item bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
+        <h2 class="text-2xl font-bold text-white mb-4"><i class="fas fa-video mr-3"></i>Your Meeting Link</h2>
+        <a href="{{ current_user.meeting_link }}" target="_blank" class="text-indigo-400 hover:underline">Join your scheduled meeting</a>
+    </div>
+    {% endif %}
+
     <div id="candidate-jobs" class="sortable-item bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
         <h2 class="text-2xl font-bold text-white mb-4 drag-handle"><i class="fas fa-arrows-alt mr-3"></i>Available Job Openings</h2>
         <div class="space-y-4 max-h-[40vh] overflow-y-auto pr-2">
@@ -29,7 +35,6 @@
         </div>
     </div>
 
-    <!-- My Applications -->
     <div id="candidate-apps" class="sortable-item bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
         <h2 class="text-2xl font-bold text-white mb-4 drag-handle"><i class="fas fa-arrows-alt mr-3"></i>My Applications</h2>
         <div class="space-y-3">
@@ -52,7 +57,6 @@
         </div>
     </div>
 
-    <!-- Share Code Snippet -->
     <div id="candidate-share-code" class="sortable-item bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
         <h2 class="text-2xl font-bold text-white mb-4 drag-handle"><i class="fas fa-arrows-alt mr-3"></i>Share Java Code Snippet</h2>
         <form action="{{ url_for('share_code') }}" method="POST" class="space-y-4">

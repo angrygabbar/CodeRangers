@@ -341,6 +341,39 @@ def manage_users():
     users = User.query.order_by(User.id).all()
     return render_template('manage_users.html', users=users)
 
+@app.route('/create_user', methods=['POST'])
+@login_required
+@role_required('admin')
+def create_user():
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    role = request.form.get('role')
+
+    if not all([username, email, password, role]):
+        flash('All fields are required.', 'danger')
+        return redirect(url_for('manage_users'))
+
+    if User.query.filter_by(email=email).first() or User.query.filter_by(username=username).first():
+        flash('Username or email already exists.', 'danger')
+        return redirect(url_for('manage_users'))
+
+    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+    avatar_url = f'https://api.dicebear.com/8.x/initials/svg?seed={username}'
+    
+    new_user = User(
+        username=username,
+        email=email,
+        password_hash=hashed_password,
+        role=role,
+        avatar_url=avatar_url,
+        is_approved=True
+    )
+    db.session.add(new_user)
+    db.session.commit()
+    flash(f'User {username} has been created successfully.', 'success')
+    return redirect(url_for('manage_users'))
+
 @app.route('/toggle_user_status/<int:user_id>')
 @login_required
 @role_required('admin')
@@ -646,7 +679,8 @@ def assign_moderator():
         "candidate": candidate,
         "problem_title": candidate.assigned_problem.title,
         "start_time_ist": candidate.test_start_time + ist_offset,
-        "end_time_ist": candidate.test_end_time + ist_offset
+        "end_time_ist": candidate.test_end_time + ist_offset,
+        "meeting_link": candidate.meeting_link
     }
     
     app.logger.info(f"Attempting to send assignment email to {moderator.email} with CC to {candidate.email}")
@@ -776,6 +810,7 @@ def assign_problem():
     problem_id = request.form.get('problem_id')
     start_time_str = request.form.get('start_time')
     end_time_str = request.form.get('end_time')
+    meeting_link = request.form.get('meeting_link')
     candidate = User.query.get(candidate_id)
     problem = ProblemStatement.query.get(problem_id)
     if not candidate or not problem_id or not start_time_str or not end_time_str:
@@ -793,6 +828,7 @@ def assign_problem():
     candidate.problem_statement_id = problem_id
     candidate.test_start_time = start_time_utc
     candidate.test_end_time = end_time_utc
+    candidate.meeting_link = meeting_link
     candidate.reminder_sent = False 
     candidate.moderator_id = None
     candidate.test_completed = False
@@ -805,7 +841,8 @@ def assign_problem():
         candidate=candidate,
         problem=problem,
         start_time_ist=start_time_ist,
-        end_time_ist=end_time_ist
+        end_time_ist=end_time_ist,
+        meeting_link=meeting_link
     )
 
     flash(f'Problem assigned to {candidate.username}.', 'success')

@@ -15,6 +15,24 @@
     </div>
 
     <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
+        <h2 class="text-2xl font-bold text-white mb-4">Assigned Candidates</h2>
+        <div class="space-y-4">
+            {% for candidate in moderated_candidates %}
+                <div class="bg-white/5 dark:bg-gray-700/20 p-4 rounded-lg animate-stagger">
+                    <p class="font-bold text-lg text-white">{{ candidate.username }}</p>
+                    {% if candidate.meeting_link %}
+                        <a href="{{ candidate.meeting_link }}" target="_blank" class="text-indigo-400 hover:underline">Join Meeting</a>
+                    {% else %}
+                        <p class="text-gray-400">No meeting link provided.</p>
+                    {% endif %}
+                </div>
+            {% else %}
+                <p class="text-gray-400">No candidates are currently assigned to you.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
         <h2 class="text-2xl font-bold text-white mb-4">Submit Feedback for a Candidate</h2>
         <form action="{{ url_for('submit_feedback') }}" method="POST" class="space-y-6">
             <div>
