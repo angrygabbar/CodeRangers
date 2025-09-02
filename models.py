@@ -61,6 +61,9 @@ class User(UserMixin, db.Model):
     applications = db.relationship('JobApplication', backref='candidate', lazy=True)
     test_submissions = db.relationship('CodeTestSubmission', foreign_keys='CodeTestSubmission.candidate_id', backref='candidate_submitter', lazy=True)
     received_tests = db.relationship('CodeTestSubmission', foreign_keys='CodeTestSubmission.recipient_id', backref='test_recipient', lazy=True)
+    feedback_given = db.relationship('Feedback', foreign_keys='Feedback.moderator_id', backref='moderator', lazy=True)
+    feedback_received = db.relationship('Feedback', foreign_keys='Feedback.candidate_id', backref='candidate', lazy=True)
+
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -113,3 +116,15 @@ class AffiliateAd(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ad_name = db.Column(db.String(100), nullable=False, unique=True)
     affiliate_link = db.Column(db.Text, nullable=False)
+
+class Feedback(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    moderator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    candidate_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    code_correctness = db.Column(db.Integer, nullable=False)
+    code_efficiency = db.Column(db.Integer, nullable=False)
+    code_readability = db.Column(db.Integer, nullable=False)
+    problem_solving = db.Column(db.Integer, nullable=False)
+    time_management = db.Column(db.Integer, nullable=False)
+    remarks = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
