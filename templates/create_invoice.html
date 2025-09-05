@@ -1,0 +1,178 @@
+{% extends "layout.html" %}
+{% block title %}Create Invoice{% endblock %}
+{% block content %}
+<div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-8 animate-dynamic backdrop-blur-sm border border-white/10">
+    <h1 class="text-3xl font-bold text-white mb-6">Create New Invoice</h1>
+    <form action="{{ url_for('create_invoice') }}" method="POST" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="recipient_name" class="block text-sm font-medium text-gray-300">Recipient Name</label>
+                <input type="text" name="recipient_name" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition">
+            </div>
+            <div>
+                <label for="recipient_email" class="block text-sm font-medium text-gray-300">Recipient Email</label>
+                <input type="email" name="recipient_email" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-700/50 text-white transition">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="bill_to_address" class="block text-sm font-medium text-gray-300">Bill To Address</label>
+                <textarea name="bill_to_address" rows="4" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 bg-gray-700/50 text-white" placeholder="123 Main St&#10;Anytown, USA 12345"></textarea>
+            </div>
+            <div>
+                <label for="ship_to_address" class="block text-sm font-medium text-gray-300">Ship To Address</label>
+                 <div class="flex items-center mt-1 mb-2">
+                    <input type="checkbox" id="same_as_billing" class="h-4 w-4 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500">
+                    <label for="same_as_billing" class="ml-2 block text-sm text-gray-300">Same as billing address</label>
+                </div>
+                <textarea name="ship_to_address" id="ship_to_address" rows="3" required class="appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 bg-gray-700/50 text-white"></textarea>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="order_id" class="block text-sm font-medium text-gray-300">Order ID (Optional)</label>
+                <input type="text" name="order_id" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 bg-gray-700/50 text-white">
+            </div>
+            <div>
+                <label for="due_date" class="block text-sm font-medium text-gray-300">Due Date</label>
+                <input type="date" name="due_date" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-gray-700/50 text-white">
+            </div>
+        </div>
+        
+        <div id="invoice-items" class="border-t border-b border-gray-700 py-6">
+            <h2 class="text-xl font-semibold text-white mb-4">Invoice Items</h2>
+            <div class="space-y-3" id="items-container">
+                <!-- Item Header -->
+                <div class="hidden md:flex items-center space-x-2 text-sm text-gray-400 px-1">
+                    <div class="flex-grow">Description</div>
+                    <div class="w-24 text-center">Quantity</div>
+                    <div class="w-32 text-center">Price</div>
+                    <div class="w-32 text-right">Total</div>
+                    <div class="w-10"></div>
+                </div>
+                <!-- Initial Item -->
+                <div class="item-row flex flex-col md:flex-row items-start md:items-center space-y-2 md:space-y-0 md:space-x-2">
+                    <input type="text" name="item_description[]" placeholder="Item Description" required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                    <input type="number" name="item_quantity[]" placeholder="Qty" required value="1" class="w-full md:w-24 text-center px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                    <input type="number" step="0.01" name="item_price[]" placeholder="Price" required class="w-full md:w-32 text-center px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                    <div class="w-full md:w-32 text-right text-white px-3 py-2 bg-gray-800/50 rounded-md item-total">₹0.00</div>
+                    <button type="button" class="remove-item-btn p-2 rounded-md text-white bg-red-600 hover:bg-red-700 flex-shrink-0 w-full md:w-auto"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+             <button type="button" id="add-item-btn" class="mt-4 w-full flex justify-center py-2 px-4 border border-dashed border-gray-500 rounded-md shadow-sm text-sm font-medium text-gray-300 hover:bg-gray-700/50 hover:text-white">
+                <i class="fas fa-plus mr-2"></i> Add Item
+            </button>
+        </div>
+
+        <div class="flex justify-end">
+            <div class="w-full md:w-1/3 space-y-3">
+                 <div class="flex justify-between items-center">
+                    <label for="subtotal" class="text-sm font-medium text-gray-300">Subtotal</label>
+                    <div id="subtotal" class="text-white font-semibold">₹0.00</div>
+                </div>
+                <div class="flex justify-between items-center">
+                    <label for="tax" class="text-sm font-medium text-gray-300">Tax (%)</label>
+                    <input type="number" step="0.01" name="tax" id="tax" value="0" class="w-24 text-center px-3 py-1 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                </div>
+                 <div class="flex justify-between items-center text-xl font-bold">
+                    <label for="grand-total" class="text-white">Total</label>
+                    <div id="grand-total" class="text-indigo-400">₹0.00</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="notes" class="block text-sm font-medium text-gray-300">Notes / Terms (Optional)</label>
+                <textarea name="notes" rows="4" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 bg-gray-700/50 text-white"></textarea>
+            </div>
+             <div>
+                <label for="payment_details" class="block text-sm font-medium text-gray-300">Payment Details (Optional)</label>
+                <textarea name="payment_details" rows="4" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 bg-gray-700/50 text-white" placeholder="Bank: Example Bank&#10;Account #: 1234567890"></textarea>
+            </div>
+        </div>
+
+        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-green-600 hover:bg-green-700">Create and Send Invoice</button>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const itemsContainer = document.getElementById('items-container');
+
+        function calculateTotals() {
+            let subtotal = 0;
+            document.querySelectorAll('.item-row').forEach(row => {
+                const quantity = parseFloat(row.querySelector('input[name="item_quantity[]"]').value) || 0;
+                const price = parseFloat(row.querySelector('input[name="item_price[]"]').value) || 0;
+                const total = quantity * price;
+                row.querySelector('.item-total').textContent = `₹₹{total.toFixed(2)}`;
+                subtotal += total;
+            });
+
+            const taxRate = parseFloat(document.getElementById('tax').value) || 0;
+            const taxAmount = subtotal * (taxRate / 100);
+            const grandTotal = subtotal + taxAmount;
+
+            document.getElementById('subtotal').textContent = `₹₹{subtotal.toFixed(2)}`;
+            document.getElementById('grand-total').textContent = `₹₹{grandTotal.toFixed(2)}`;
+        }
+
+        function addItem() {
+            const newItem = document.createElement('div');
+            newItem.className = 'item-row flex flex-col md:flex-row items-start md:items-center space-y-2 md:space-y-0 md:space-x-2';
+            newItem.innerHTML = `
+                <input type="text" name="item_description[]" placeholder="Item Description" required class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                <input type="number" name="item_quantity[]" placeholder="Qty" required value="1" class="w-full md:w-24 text-center px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                <input type="number" step="0.01" name="item_price[]" placeholder="Price" required class="w-full md:w-32 text-center px-3 py-2 border border-gray-600 rounded-md bg-gray-700/50 text-white">
+                <div class="w-full md:w-32 text-right text-white px-3 py-2 bg-gray-800/50 rounded-md item-total">₹0.00</div>
+                <button type="button" class="remove-item-btn p-2 rounded-md text-white bg-red-600 hover:bg-red-700 flex-shrink-0 w-full md:w-auto"><i class="fas fa-trash"></i></button>
+            `;
+            itemsContainer.appendChild(newItem);
+            attachRowListeners(newItem);
+        }
+
+        function attachRowListeners(row) {
+             row.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', calculateTotals);
+            });
+        }
+        
+        document.getElementById('add-item-btn').addEventListener('click', addItem);
+        document.getElementById('tax').addEventListener('input', calculateTotals);
+
+        itemsContainer.addEventListener('click', (e) => {
+            if (e.target.closest('.remove-item-btn')) {
+                if (itemsContainer.querySelectorAll('.item-row').length > 1) {
+                    e.target.closest('.item-row').remove();
+                    calculateTotals();
+                } else {
+                    alert("You must have at least one item in the invoice.");
+                }
+            }
+        });
+
+        const sameAsBillingCheckbox = document.getElementById('same_as_billing');
+        const billToTextarea = document.querySelector('textarea[name="bill_to_address"]');
+        const shipToTextarea = document.getElementById('ship_to_address');
+
+        const syncAddresses = () => {
+            if (sameAsBillingCheckbox.checked) {
+                shipToTextarea.value = billToTextarea.value;
+                shipToTextarea.readOnly = true;
+            } else {
+                shipToTextarea.readOnly = false;
+            }
+        };
+
+        sameAsBillingCheckbox.addEventListener('change', syncAddresses);
+        billToTextarea.addEventListener('input', syncAddresses);
+
+        document.querySelectorAll('.item-row').forEach(attachRowListeners);
+        calculateTotals();
+    });
+</script>
+{% endblock %}
+

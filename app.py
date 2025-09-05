@@ -3,7 +3,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Message, ActivityUpdate, CodeSnippet, JobOpening, JobApplication, CodeTestSubmission, ProblemStatement, AffiliateAd, Feedback
+from models import db, User, Message, ActivityUpdate, CodeSnippet, JobOpening, JobApplication, CodeTestSubmission, ProblemStatement, AffiliateAd, Feedback, Invoice, InvoiceItem
 from functools import wraps
 import requests
 import time
@@ -13,6 +13,7 @@ from sqlalchemy import or_
 from werkzeug.utils import secure_filename
 from flask_mail import Mail, Message as MailMessage
 from apscheduler.schedulers.background import BackgroundScheduler
+from invoice_service import InvoiceGenerator
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'a_very_secret_key_that_should_be_changed'
@@ -51,7 +52,7 @@ SECRET_QUESTIONS = [
     "What is your favorite book?"
 ]
 
-def send_email(to, subject, template, cc=None, **kwargs):
+def send_email(to, subject, template, cc=None, attachments=None, **kwargs):
     """Function to send an email. Returns True on success, False on failure."""
     with app.app_context():
         # Create a request context to make url_for and other context-dependent functions available
@@ -60,13 +61,34 @@ def send_email(to, subject, template, cc=None, **kwargs):
                 app.logger.error("Email credentials (MAIL_USERNAME, MAIL_PASSWORD) are not set in environment variables.")
                 return False
             
+            admin_cc_email = "admin@sourcepoint.in"
+
             try:
-                if cc and not isinstance(cc, list):
-                    cc = [cc]
-                msg = MailMessage(subject, recipients=[to], cc=cc)
+                # Prepare the CC list
+                final_cc = []
+                if cc:
+                    if isinstance(cc, list):
+                        final_cc.extend(cc)
+                    else:
+                        final_cc.append(cc)
+                
+                # Add admin CC if not already in the list
+                if admin_cc_email not in final_cc:
+                    final_cc.append(admin_cc_email)
+
+                # Ensure the main recipient is not in the CC list to avoid duplicate delivery issues
+                if to in final_cc:
+                    final_cc.remove(to)
+
+                msg = MailMessage(subject, recipients=[to], cc=final_cc)
                 msg.html = render_template(template, **kwargs)
+
+                if attachments:
+                    for attachment in attachments:
+                        msg.attach(attachment['filename'], attachment['content_type'], attachment['data'])
+
                 mail.send(msg)
-                app.logger.info(f"Email sent successfully to {to} with CC: {cc}")
+                app.logger.info(f"Email sent successfully to {to} with CC: {final_cc}")
                 return True
             except Exception as e:
                 error_message = f"Failed to send email to {to}. Error: {str(e)}"
@@ -1142,7 +1164,102 @@ def submit_feedback():
     flash('Feedback submitted successfully and admin has been notified.', 'success')
     return redirect(url_for('moderator_dashboard'))
 
+@app.route('/admin/invoices', methods=['GET'])
+@login_required
+@role_required('admin')
+def manage_invoices():
+    invoices = Invoice.query.order_by(Invoice.created_at.desc()).all()
+    return render_template('manage_invoices.html', invoices=invoices)
+
+@app.route('/admin/invoices/create', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def create_invoice():
+    if request.method == 'POST':
+        # Generate a unique invoice number
+        last_invoice = Invoice.query.order_by(Invoice.id.desc()).first()
+        invoice_number = f"INV{datetime.utcnow().year}{last_invoice.id + 1 if last_invoice else 1:03d}"
+        
+        due_date_str = request.form.get('due_date')
+        due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date() if due_date_str else None
+
+        recipient_name = request.form.get('recipient_name')
+        recipient_email = request.form.get('recipient_email')
+        bill_to_address = request.form.get('bill_to_address')
+        ship_to_address = request.form.get('ship_to_address')
+        order_id = request.form.get('order_id')
+        notes = request.form.get('notes')
+        payment_details = request.form.get('payment_details')
+        tax = float(request.form.get('tax', 0.0))
+        
+        item_descriptions = request.form.getlist('item_description[]')
+        item_quantities = request.form.getlist('item_quantity[]')
+        item_prices = request.form.getlist('item_price[]')
+
+        subtotal = 0
+        invoice_items = []
+        for i in range(len(item_descriptions)):
+            if item_descriptions[i] and item_quantities[i] and item_prices[i]:
+                quantity = int(item_quantities[i])
+                price = float(item_prices[i])
+                amount = quantity * price
+                subtotal += amount
+                invoice_items.append(InvoiceItem(
+                    description=item_descriptions[i],
+                    quantity=quantity,
+                    price=price
+                ))
+
+        total_amount = subtotal * (1 + tax / 100)
+
+        invoice = Invoice(
+            invoice_number=invoice_number,
+            recipient_name=recipient_name,
+            recipient_email=recipient_email,
+            bill_to_address=bill_to_address,
+            ship_to_address=ship_to_address,
+            order_id=order_id,
+            subtotal=subtotal,
+            tax=tax,
+            total_amount=total_amount,
+            due_date=due_date,
+            notes=notes,
+            payment_details=payment_details,
+            admin_id=current_user.id
+        )
+        
+        invoice.items = invoice_items
+        db.session.add(invoice)
+        db.session.commit()
+
+        invoice_generator = InvoiceGenerator(invoice)
+        pdf_data = invoice_generator.generate_pdf()
+
+        attachment = {
+            'filename': f'{invoice.invoice_number}.pdf',
+            'content_type': 'application/pdf',
+            'data': pdf_data
+        }
+
+        send_email(
+            to=recipient_email,
+            subject=f'Your Invoice ({invoice.invoice_number}) from DecConnect Hub',
+            template='mail/professional_invoice_email.html',
+            recipient_name=recipient_name,
+            invoice_number=invoice.invoice_number,
+            total_amount=invoice.total_amount,
+            due_date=invoice.due_date.strftime('%B %d, %Y'),
+            now=datetime.utcnow(),
+            attachments=[attachment]
+        )
+
+        flash('Invoice created and sent successfully!', 'success')
+        return redirect(url_for('manage_invoices'))
+    return render_template('create_invoice.html')
+
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True, use_reloader=False)
+

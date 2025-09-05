@@ -64,6 +64,7 @@ class User(UserMixin, db.Model):
     received_tests = db.relationship('CodeTestSubmission', foreign_keys='CodeTestSubmission.recipient_id', backref='test_recipient', lazy=True)
     feedback_given = db.relationship('Feedback', foreign_keys='Feedback.moderator_id', backref='moderator', lazy=True)
     feedback_received = db.relationship('Feedback', foreign_keys='Feedback.candidate_id', backref='candidate', lazy=True)
+    invoices = db.relationship('Invoice', backref='admin', lazy=True)
 
 
 class Message(db.Model):
@@ -128,3 +129,29 @@ class Feedback(db.Model):
     time_management = db.Column(db.Integer, nullable=False)
     remarks = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Invoice(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_number = db.Column(db.String(50), unique=True, nullable=False)
+    recipient_name = db.Column(db.String(100), nullable=False)
+    recipient_email = db.Column(db.String(120), nullable=False)
+    bill_to_address = db.Column(db.Text, nullable=True)
+    ship_to_address = db.Column(db.Text, nullable=True)
+    order_id = db.Column(db.String(50), nullable=True)
+    subtotal = db.Column(db.Float, nullable=False)
+    tax = db.Column(db.Float, nullable=False, default=0.0)
+    total_amount = db.Column(db.Float, nullable=False)
+    due_date = db.Column(db.Date, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    payment_details = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    admin_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    items = db.relationship('InvoiceItem', backref='invoice', lazy=True, cascade="all, delete-orphan")
+
+class InvoiceItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    description = db.Column(db.String(200), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+    price = db.Column(db.Float, nullable=False)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'), nullable=False)
+

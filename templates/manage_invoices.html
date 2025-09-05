@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% block title %}Manage Invoices{% endblock %}
+{% block content %}
+<div class="bg-white/5 dark:bg-gray-800/20 rounded-lg shadow-xl p-6 animate-dynamic backdrop-blur-sm border border-white/10">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-white">Manage Invoices</h1>
+        <a href="{{ url_for('create_invoice') }}" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+            <i class="fas fa-plus mr-2"></i> Create New Invoice
+        </a>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full">
+            <thead class="border-b border-white/20">
+                <tr>
+                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Invoice #</th>
+                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Recipient</th>
+                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Order ID</th>
+                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Total Amount</th>
+                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Date Created</th>
+                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Due Date</th>
+                </tr>
+            </thead>
+            <tbody id="invoice-table-body">
+                {% for invoice in invoices %}
+                <tr class="border-b border-white/10 hover:bg-gray-700/20">
+                    <td class="py-4 px-4 whitespace-nowrap text-sm font-medium text-indigo-400">{{ invoice.invoice_number }}</td>
+                    <td class="py-4 px-4 whitespace-nowrap text-sm text-white">
+                        <div>{{ invoice.recipient_name }}</div>
+                        <div class="text-xs text-gray-400">{{ invoice.recipient_email }}</div>
+                    </td>
+                    <td class="py-4 px-4 whitespace-nowrap text-sm text-gray-300">{{ invoice.order_id or 'N/A' }}</td>
+                    <td class="py-4 px-4 whitespace-nowrap text-sm text-white font-semibold">${{ "%.2f"|format(invoice.total_amount) }}</td>
+                    <td class="py-4 px-4 whitespace-nowrap text-sm text-gray-300">{{ invoice.created_at.strftime('%b %d, %Y') }}</td>
+                    <td class="py-4 px-4 whitespace-nowrap text-sm text-gray-300">{{ invoice.due_date.strftime('%b %d, %Y') if invoice.due_date else 'N/A' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-10 text-gray-400">
+                        <p class="mb-2">No invoices have been created yet.</p>
+                        <a href="{{ url_for('create_invoice') }}" class="text-indigo-400 hover:underline">Create the first one</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
